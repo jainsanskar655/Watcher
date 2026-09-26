@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#111114">
+    <meta name="description" content="Watcher HQ presales account timeline command center">
+    <title>Watcher HQ · Presales Control</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div id="app">
+      <section id="login-screen" class="login-screen">
+        <div class="login-noise"></div>
+        <div class="login-grid"></div>
+        <div class="login-card">
+          <div class="brand-lockup brand-lockup-large">
+            <div class="brand-mark"><span>W</span></div>
+            <div>
+              <div class="brand-name">WATCHER <span>HQ</span></div>
+              <div class="brand-kicker">Presales intelligence system</div>
+            </div>
+          </div>
+          <div class="login-rule"></div>
+          <div class="login-heading">
+            <span class="eyebrow">Secure team access</span>
+            <h1>Every account has a pulse.</h1>
+            <p>One command center for the team’s presales motion, review gates, and next move.</p>
+          </div>
+          <form id="login-form" class="stack-form">
+            <label>
+              <span>Team username</span>
+              <input id="login-username" name="username" autocomplete="username" placeholder="e.g. sanskar" required>
+            </label>
+            <label>
+              <span>Passcode</span>
+              <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your passcode" required>
+            </label>
+            <button class="button button-primary button-wide" type="submit">
+              <span>Enter the Watcher HQ</span>
+              <span data-icon="arrow-up-right"></span>
+            </button>
+            <p id="login-error" class="form-error" role="alert"></p>
+          </form>
+          <div class="login-footnote">
+            <span class="status-dot status-dot-live"></span>
+            <span>Local-first workspace · team access is role controlled</span>
+          </div>
+        </div>
+        <div class="login-aside">
+          <div class="aside-kicker">THE MISSION</div>
+          <div class="aside-title">Make the next move visible.</div>
+          <div class="aside-copy">Sanskar watches the whole mission. Apeksha guards the review gate. Samriddhi and Renuja carry the accounts forward.</div>
+          <div class="aside-line"></div>
+          <div class="aside-meta"><span>LOCAL DATABASE</span><span>SQLITE / 14 DAY SESSIONS</span></div>
+        </div>
+      </section>
+
+      <div id="app-shell" class="app-shell is-hidden">
+        <aside id="sidebar" class="sidebar">
+          <div class="sidebar-top">
+            <div class="brand-lockup">
+              <div class="brand-mark"><span>W</span></div>
+              <div>
+                <div class="brand-name">WATCHER <span>HQ</span></div>
+                <div class="brand-kicker">Presales control</div>
+              </div>
+            </div>
+            <button id="sidebar-close" class="icon-button sidebar-close" type="button" aria-label="Close navigation" data-icon="x"></button>
+          </div>
+          <div class="sidebar-label">Mission control</div>
+          <nav class="main-nav" aria-label="Primary navigation">
+            <button class="nav-item is-active" type="button" data-route="dashboard">
+              <span class="nav-icon" data-icon="grid"></span><span>Command center</span><span class="nav-count" id="nav-pending-count"></span>
+            </button>
+            <button class="nav-item" type="button" data-route="timeline">
+              <span class="nav-icon" data-icon="layers"></span><span>TVA timeline</span>
+            </button>
+            <button class="nav-item" type="button" data-route="accounts">
+              <span class="nav-icon" data-icon="grid"></span><span>Account workspace</span>
+            </button>
+            <button class="nav-item" type="button" data-route="reviews">
+              <span class="nav-icon" data-icon="check-circle"></span><span>Review queue</span><span class="nav-count" id="nav-review-count"></span>
+            </button>
+            <button class="nav-item" type="button" data-route="team">
+              <span class="nav-icon" data-icon="users"></span><span>Team roster</span>
+            </button>
+          </nav>
+          <div class="sidebar-label sidebar-label-spaced">Quick actions</div>
+          <nav class="secondary-nav" aria-label="Quick actions">
+            <button class="nav-item nav-item-quiet" type="button" data-action="new-account">
+              <span class="nav-icon" data-icon="plus"></span><span>Add account</span>
+            </button>
+            <button class="nav-item nav-item-quiet" type="button" data-action="refresh">
+              <span class="nav-icon" data-icon="refresh"></span><span>Refresh data</span>
+            </button>
+          </nav>
+          <div class="sidebar-bottom">
+            <div class="watcher-card">
+              <div class="watcher-orbit"><span></span></div>
+              <div class="watcher-card-copy"><span class="eyebrow">Current operator</span><strong id="sidebar-user-name">—</strong><small id="sidebar-user-role">—</small></div>
+              <button id="logout-button" class="icon-button" type="button" aria-label="Sign out" data-action="logout" data-icon="log-out"></button>
+            </div>
+            <div class="sidebar-footer"><span class="status-dot status-dot-live"></span><span>Database synced locally</span></div>
+          </div>
+        </aside>
+        <div id="sidebar-scrim" class="sidebar-scrim"></div>
+        <div class="main-shell">
+          <header class="topbar">
+            <button id="menu-button" class="icon-button menu-button" type="button" aria-label="Open navigation" data-icon="menu"></button>
+            <div class="breadcrumb"><span id="breadcrumb-root">Mission control</span><span class="breadcrumb-slash">/</span><strong id="breadcrumb-current">Command center</strong></div>
+            <div class="topbar-actions">
+              <div class="global-search"><span data-icon="search"></span><input id="global-search" type="search" placeholder="Search accounts, partners..." autocomplete="off"></div>
+              <button class="icon-button notification-button" type="button" aria-label="Notifications" data-icon="bell"><span id="notification-dot"></span></button>
+              <div class="topbar-user"><div id="topbar-avatar" class="avatar avatar-small">W</div><div class="topbar-user-copy"><strong id="topbar-user-name">—</strong><span id="topbar-user-title">—</span></div><span class="online-indicator"></span></div>
+            </div>
+          </header>
+          <main id="page-content" class="page-content" tabindex="-1"></main>
+        </div>
+      </div>
+      <div id="modal-root"></div>
+      <div id="toast-root" class="toast-root" aria-live="polite"></div>
+    </div>
+    <script src="./config.js" defer></script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

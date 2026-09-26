@@ -39,6 +39,8 @@ const icons = {
   'send': '<svg viewBox="0 0 24 24"><path d="m21 3-7.2 18-3.4-7.4L3 10.2 21 3Z"/><path d="M10.4 13.6 21 3"/></svg>',
   'shield': '<svg viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.5-3 8.1-7 10-4-1.9-7-5.5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>',
   'spark': '<svg viewBox="0 0 24 24"><path d="m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3ZM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></svg>',
+  'trash': '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M6.5 7l.8 12.1A1.5 1.5 0 0 0 8.8 20.5h6.4a1.5 1.5 0 0 0 1.5-1.4L17.5 7"/><path d="M10.5 11v6M13.5 11v6"/></svg>',
+  'unlock': '<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>',
   'users': '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 19a6 6 0 0 1 12 0M16 5.5a3 3 0 0 1 0 5.8M17 14a5 5 0 0 1 4 5"/></svg>',
   'x': '<svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>'
 };
@@ -430,6 +432,20 @@ function reviewCard(update) {
   </article>`;
 }
 
+function eraseRequestCard(update) {
+  const isLead = state.user?.role === 'lead';
+  const mine = update.deletionRequestedBy === state.user?.id;
+  const controls = isLead
+    ? `<span class="review-actions"><button class="button button-ghost" type="button" data-action="open-account" data-account-id="${update.accountId}">Open</button><button class="button button-ghost" type="button" data-action="erase-decision" data-decision="keep" data-update-id="${update.id}">${icon('check')} Keep entry</button><button class="button button-danger" type="button" data-action="erase-decision" data-decision="erase" data-update-id="${update.id}">${icon('trash')} Erase now</button></span>`
+    : `<span class="review-actions"><button class="button button-ghost" type="button" data-action="open-account" data-account-id="${update.accountId}">Open</button><button class="button button-ghost" type="button" data-action="cancel-erase" data-update-id="${update.id}">Cancel request</button></span>`;
+  return `<article class="review-card erase-request-card">
+    <div class="review-card-top"><div class="review-account"><span class="account-mark account-mark-danger">${icon('trash')}</span><strong>${escapeHtml(update.accountName || 'Account timeline')}</strong></div><span class="status-chip status-changes">${isLead ? 'Your decision' : 'Awaiting Watcher'}</span></div>
+    <p class="review-card-body">${escapeHtml(update.body)}</p>
+    <div class="erase-reason">${icon('send')}<span><strong>${escapeHtml(update.deletionRequestedByName || update.authorName)}</strong> asked to erase this: ${escapeHtml(update.deletionReason || 'no reason given')}</span></div>
+    <div class="review-card-footer"><span class="review-author">${avatarHtml(update, 'avatar-small')} ${escapeHtml(update.authorName)} · ${escapeHtml(formatDate(update.occurredAt))}${mine ? ' · your request' : ''}</span>${controls}</div>
+  </article>`;
+}
+
 function emptyState(title, copy) {
   return `<div class="empty-state"><span class="empty-state-icon">${icon('check')}</span><strong>${escapeHtml(title)}</strong><p>${escapeHtml(copy)}</p></div>`;
 }
@@ -531,7 +547,31 @@ function accountSheetCellContent(account, column) {
 
 function accountSheetActions(account) {
   const canUpdate = canEditAccountSheet(account);
-  return `<span class="sheet-row-actions">${canUpdate ? `<button class="sheet-log-button" type="button" data-action="new-update" data-account-id="${account.id}">Log signal</button>` : ''}<button class="sheet-open-button" type="button" data-action="open-account" data-account-id="${account.id}" aria-label="Open ${escapeHtml(account.name)}">${icon('arrow-right')}</button></span>`;
+  return `<span class="sheet-row-actions">${canUpdate ? `<button class="sheet-log-button" type="button" data-action="correct" data-account-id="${account.id}">Fix</button><button class="sheet-log-button" type="button" data-action="new-update" data-account-id="${account.id}">Log signal</button><button class="sheet-log-button sheet-log-button-danger" type="button" data-action="pick-erase" data-account-id="${account.id}">Erase&hellip;</button>` : ''}<button class="sheet-open-button" type="button" data-action="open-account" data-account-id="${account.id}" aria-label="Open ${escapeHtml(account.name)}">${icon('arrow-right')}</button></span>`;
+}
+
+async function openAccountErasePicker(accountId) {
+  let payload;
+  try {
+    payload = await api(`/api/accounts/${accountId}`);
+  } catch (error) {
+    return showToast('Timeline unavailable', error.message, true);
+  }
+  const account = payload.account;
+  const updates = payload.updates || [];
+  updates.forEach((update) => pickedAccountUpdates.set(Number(update.id), update));
+  const isLead = state.user?.role === 'lead';
+  const rows = updates.length
+    ? updates.map((update) => {
+      const pending = update.deletionState === 'requested';
+      return `<div class="erase-picker-row ${pending ? 'is-pending' : ''}">
+        <span class="erase-picker-meta">${timelineSignalChip(update)}<small>${escapeHtml(update.authorName)} · ${escapeHtml(formatFullDate(update.occurredAt))}</small></span>
+        <p>${escapeHtml(timelineTruncate(update.body, 160))}</p>
+        <span class="erase-picker-actions">${pending ? `<span class="timeline-pending-chip">erase requested</span>` : `<button class="button button-ghost button-small" type="button" data-action="correct" data-account-id="${account.id}" data-update-id="${update.id}">${icon('spark')} Fix</button><button class="button button-danger button-small" type="button" data-action="erase" data-update-id="${update.id}">${icon('trash')} ${isLead ? 'Erase' : 'Request'}</button>`}</span>
+      </div>`;
+    }).join('')
+    : emptyState('No timeline entries', 'Log a signal first, then it can be corrected or erased from here.');
+  openModal(`${modalHeader('Erase a timeline entry', escapeHtml(account.name))}<div class="modal-body"><p class="form-help">${isLead ? 'Erasing as the Watcher removes the entry immediately.' : 'Pick the entry that is wrong. Nothing is removed until the Watcher approves the request.'}</p><div class="erase-picker">${rows}</div><div class="form-actions"><button class="button button-ghost" type="button" data-action="close-modal">Close</button></div></div>`);
 }
 
 function accountSheetCell(account, column, rowIndex) {
@@ -719,11 +759,15 @@ function renderAccounts() {
 
 function renderReviews() {
   const queue = state.dashboard?.reviewQueue || [];
-  const title = state.user?.role === 'lead' ? 'Review queue.' : 'Apeksha’s review gate.';
-  const copy = state.user?.role === 'lead' ? 'Every field update in the mission is visible here. Approve it, or send it back with a clear next instruction.' : 'Samriddhi’s and Renuja’s field updates arrive here before they become trusted account history.';
+  const eraseRequests = state.dashboard?.eraseRequests || [];
+  const isLead = state.user?.role === 'lead';
+  const title = isLead ? 'Review queue.' : 'Apeksha’s review gate.';
+  const copy = isLead ? 'Every field update in the mission is visible here. Approve it, or send it back with a clear next instruction. Erase requests are yours alone to decide.' : 'Samriddhi’s and Renuja’s field updates arrive here before they become trusted account history.';
+  const eraseSection = isLead || eraseRequests.length ? `<section class="panel"><div class="panel-header"><div><span class="eyebrow">Erase requests · ${eraseRequests.length} waiting</span><h2 class="panel-title">${isLead ? 'Decide what leaves the record.' : 'Your erase requests.'}</h2><p class="panel-subtitle">Nothing disappears on request alone. ${isLead ? 'Approve to erase it permanently, or keep it and the entry returns to the timeline.' : 'The Watcher approves each request before the entry is erased.'}</p></div>${isLead && eraseRequests.length ? `<span class="status-chip status-changes">${eraseRequests.length} to decide</span>` : ''}</div><div class="review-list">${eraseRequests.length ? eraseRequests.map(eraseRequestCard).join('') : emptyState('No erase requests', isLead ? 'No keeper has asked to remove a timeline entry.' : 'You have not asked to erase any timeline entry.')}</div></section>` : '';
   $('#page-content').innerHTML = `
-    <div class="page-header"><div class="page-header-copy"><span class="eyebrow">Hierarchy gate · ${queue.length} waiting</span><h1>${escapeHtml(title)}</h1><p>${escapeHtml(copy)}</p></div><div class="page-header-actions"><button class="button button-ghost" type="button" data-action="refresh">${icon('refresh')} Refresh queue</button></div></div>
-    <div class="dashboard-grid"><section class="panel"><div class="panel-header"><div><span class="eyebrow">Incoming transmissions</span><h2 class="panel-title">Review in context.</h2><p class="panel-subtitle">Open the account timeline if you need the full story before deciding.</p></div></div><div class="review-list">${queue.length ? queue.map(reviewCard).join('') : emptyState('The gate is clear', 'New updates from the field will land here automatically.')}</div></section><div class="dashboard-stack"><section class="route-card"><span class="eyebrow">Authority map</span><h3>Review, then release.</h3><p>Every note keeps its author and review state in the timeline, so accountability stays visible.</p><div class="route-line"><span class="route-node">S</span><span class="route-arrow"></span><span class="route-node">A</span><span class="route-arrow"></span><span class="route-node route-node-red">W</span><span>Trusted history</span></div></section><section class="panel"><div class="panel-header"><div><span class="eyebrow">How it works</span><h2 class="panel-title">A simple field loop.</h2></div></div><div class="detail-panel"><div class="detail-list"><div class="detail-list-row"><span>01 · Field operator</span><strong>Logs the next move</strong></div><div class="detail-list-row"><span>02 · Review lead</span><strong>Checks context</strong></div><div class="detail-list-row"><span>03 · Watcher</span><strong>Sees the whole mission</strong></div></div></div></section></div></div>`;
+    <div class="page-header"><div class="page-header-copy"><span class="eyebrow">Hierarchy gate · ${queue.length} waiting${eraseRequests.length ? ` · ${eraseRequests.length} erase` : ''}</span><h1>${escapeHtml(title)}</h1><p>${escapeHtml(copy)}</p></div><div class="page-header-actions"><button class="button button-ghost" type="button" data-action="refresh">${icon('refresh')} Refresh queue</button></div></div>
+    <div class="dashboard-grid"><section class="panel"><div class="panel-header"><div><span class="eyebrow">Incoming transmissions</span><h2 class="panel-title">Review in context.</h2><p class="panel-subtitle">Open the account timeline if you need the full story before deciding.</p></div></div><div class="review-list">${queue.length ? queue.map(reviewCard).join('') : emptyState('The gate is clear', 'New updates from the field will land here automatically.')}</div></section><div class="dashboard-stack"><section class="route-card"><span class="eyebrow">Authority map</span><h3>Review, then release.</h3><p>Every note keeps its author and review state in the timeline, so accountability stays visible.</p><div class="route-line"><span class="route-node">S</span><span class="route-arrow"></span><span class="route-node">A</span><span class="route-arrow"></span><span class="route-node route-node-red">W</span><span>Trusted history</span></div></section><section class="panel"><div class="panel-header"><div><span class="eyebrow">How it works</span><h2 class="panel-title">A simple field loop.</h2></div></div><div class="detail-panel"><div class="detail-list"><div class="detail-list-row"><span>01 · Field operator</span><strong>Logs the next move</strong></div><div class="detail-list-row"><span>02 · Review lead</span><strong>Checks context</strong></div><div class="detail-list-row"><span>03 · Watcher</span><strong>Sees the whole mission</strong></div></div></div></section></div></div>
+    ${eraseSection}`;
   hydrateIcons($('#page-content'));
 }
 
@@ -802,7 +846,8 @@ function timelineIsIssue(update) {
   return ['issue', 'roadblock'].includes(signalType(update));
 }
 
-function timelineIsResolution(update) {
+function timelineIsResolution(update, issueId) {
+  if (issueId && Number(update.correctsUpdateId) === Number(issueId)) return true;
   return signalType(update) === 'resolution' || /resolved|resolution|rejoin|re-join|unblocked|back on track|cleared/i.test(String(update.body || ''));
 }
 
@@ -813,11 +858,11 @@ function timelineBranchModels(stream) {
     if (!timelineIsIssue(issue)) return;
     const nextIssueIndex = sorted.findIndex((candidate, candidateIndex) => candidateIndex > issueIndex && timelineIsIssue(candidate));
     const endIndex = nextIssueIndex === -1 ? sorted.length : nextIssueIndex;
-    const resolutionIndex = sorted.findIndex((candidate, candidateIndex) => candidateIndex > issueIndex && candidateIndex < endIndex && timelineIsResolution(candidate));
+    const resolutionIndex = sorted.findIndex((candidate, candidateIndex) => candidateIndex > issueIndex && candidateIndex < endIndex && timelineIsResolution(candidate, issue.id));
     const resolution = resolutionIndex === -1 ? null : sorted[resolutionIndex];
     const related = sorted
       .slice(issueIndex + 1, resolutionIndex === -1 ? endIndex : resolutionIndex + 1)
-      .filter((event) => event.id !== issue.id && (timelineIsResolution(event) || ['task', 'roadblock', 'meeting', 'milestone'].includes(signalType(event))));
+      .filter((event) => event.id !== issue.id && (timelineIsResolution(event, issue.id) || ['task', 'roadblock', 'meeting', 'milestone'].includes(signalType(event))));
     branches.push({ issue, resolution, related, open: !resolution });
   });
   return branches;
@@ -837,86 +882,151 @@ function timelineTruncate(value, length = 28) {
   return text.length > length ? `${text.slice(0, length - 1)}…` : text;
 }
 
-function timelineEventPositions(events, minimum, maximum, spread) {
+const TVA_PLOT = { left: 330, right: 1440 };
+const TVA_TRUNK_OFFSET = 34;
+const TVA_ROW_BASE = 76;
+const TVA_LANE_START = 26;
+const TVA_LANE_GAP = 21;
+const TVA_NODE_GAP = 30;
+const TVA_BRANCH_RADIUS = 9;
+
+function timelineStreamHeight(branchCount) {
+  return TVA_ROW_BASE + Math.max(0, branchCount - 1) * TVA_LANE_GAP;
+}
+
+function timelineLaneOffset(branchIndex) {
+  return TVA_LANE_START + branchIndex * TVA_LANE_GAP;
+}
+
+function timelineTimeValue(event) {
+  const parsed = new Date(event.occurredAt).getTime();
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function timelinePlotX(value, minimum, span) {
+  const usable = TVA_PLOT.right - TVA_PLOT.left;
+  const clamped = Math.max(minimum, Math.min(minimum + span, value));
+  return TVA_PLOT.left + ((clamped - minimum) / span) * usable;
+}
+
+function timelineEventPositions(events, minimum, maximum) {
+  const span = maximum - minimum || 24 * 60 * 60 * 1000;
   const buckets = new Map();
   events.forEach((event) => {
-    const parsed = new Date(event.occurredAt).getTime();
-    const time = Number.isFinite(parsed) ? parsed : minimum;
-    if (!buckets.has(time)) buckets.set(time, []);
-    buckets.get(time).push(event);
+    const time = timelineTimeValue(event);
+    const key = time === null ? minimum : time;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(event);
   });
+  const keys = Array.from(buckets.keys()).sort((left, right) => left - right);
+  const xs = keys.map((key) => timelinePlotX(key, minimum, span));
+  for (let index = 1; index < xs.length; index += 1) {
+    if (xs[index] - xs[index - 1] < TVA_NODE_GAP) xs[index] = xs[index - 1] + TVA_NODE_GAP;
+  }
+  const overflow = xs.length ? xs[xs.length - 1] - TVA_PLOT.right : 0;
+  const corrected = overflow > 0 ? xs.map((x) => x - overflow) : xs;
+  const byKey = new Map(keys.map((key, index) => [key, corrected[index]]));
   const positions = new Map();
-  buckets.forEach((bucket, time) => {
-    const base = 300 + ((time - minimum) / spread) * 1060;
-    const step = Math.min(28, 160 / Math.max(bucket.length, 1));
+  buckets.forEach((bucket, key) => {
     bucket.forEach((event, index) => {
-      const offset = (index - (bucket.length - 1) / 2) * step;
-      positions.set(event.id, Math.max(312, Math.min(1380, base + offset)));
+      const base = byKey.get(key) ?? TVA_PLOT.left;
+      const stagger = (bucket.length - 1) * 6;
+      positions.set(event.id, base + index * 12 - stagger);
     });
   });
   return positions;
 }
 
-function timelineCurvePath(points, startX, endX, y) {
-  const pointsWithEnds = [{ x: startX, y }, ...points.filter((point) => point.x > startX && point.x < endX), { x: endX, y }];
-  let path = `M ${pointsWithEnds[0].x} ${pointsWithEnds[0].y}`;
-  pointsWithEnds.slice(1).forEach((point, pointIndex) => {
-    const previous = pointsWithEnds[pointIndex];
-    const direction = point.x >= previous.x ? 1 : -1;
-    const curve = Math.max(14, Math.min(48, Math.abs(point.x - previous.x) * 0.42));
-    const lift = (pointIndex % 2 === 0 ? -1 : 1) * Math.min(10, curve * 0.22);
-    path += ` C ${previous.x + curve * direction} ${previous.y + lift}, ${point.x - curve * direction} ${point.y - lift}, ${point.x} ${point.y}`;
-  });
-  return path;
+function timelineTrunkPath(y, startX, endX) {
+  return `M ${startX} ${y} L ${endX} ${y}`;
 }
 
-function timelineBranchPath(issueX, resolutionX, y, branchY, endX) {
-  const joinX = resolutionX || endX - 34;
-  const branchStartX = issueX + Math.min(34, Math.max(22, (joinX - issueX) * 0.2));
-  const branchEndX = resolutionX ? Math.max(branchStartX + 22, resolutionX - 24) : joinX;
-  let path = `M ${issueX} ${y} C ${issueX + 18} ${y}, ${branchStartX - 8} ${branchY}, ${branchStartX + 20} ${branchY} L ${branchEndX - 20} ${branchY}`;
-  if (resolutionX) path += ` C ${resolutionX - 9} ${branchY}, ${resolutionX - 8} ${y}, ${resolutionX} ${y}`;
-  else path += ` L ${joinX} ${branchY}`;
-  return path;
+function timelineBranchPath(issueX, joinX, y, laneY) {
+  const radius = Math.min(TVA_BRANCH_RADIUS, Math.max(4, (joinX - issueX) / 2));
+  return `M ${issueX} ${y}`
+    + ` L ${issueX} ${laneY + radius}`
+    + ` Q ${issueX} ${laneY} ${issueX + radius} ${laneY}`
+    + ` L ${joinX - radius} ${laneY}`
+    + ` Q ${joinX} ${laneY} ${joinX} ${laneY + radius}`
+    + ` L ${joinX} ${y}`;
+}
+
+function timelineOpenBranchPath(issueX, endX, y, laneY) {
+  const radius = Math.min(TVA_BRANCH_RADIUS, Math.max(4, (endX - issueX) / 2));
+  return `M ${issueX} ${y}`
+    + ` L ${issueX} ${laneY + radius}`
+    + ` Q ${issueX} ${laneY} ${issueX + radius} ${laneY}`
+    + ` L ${endX} ${laneY}`;
+}
+
+function timelineNodeTitle(event) {
+  return `${event.accountName} · ${event.authorName} · ${typeLabel(event.type)}\n${event.body}`;
 }
 
 function timelineStreamMarkup(stream, config) {
-  const { positions, streamStart, convergenceX, rowTop, rowHeight, streamIndex } = config;
-  const y = rowTop + streamIndex * rowHeight + rowHeight / 2;
+  const { positions, minimum, span, nowX, layout, streamIndex } = config;
+  const y = layout.trunkY;
   const variant = ['red', 'blue', 'violet', 'gold', 'green'][streamIndex % 5];
-  const points = stream.events.map((event) => ({ x: positions.get(event.id), y }));
-  const mainPath = timelineCurvePath(points, streamStart, convergenceX, y);
   const branches = timelineBranchModels(stream);
+  const openBranches = branches.filter((branch) => branch.open);
+  const railEnd = TVA_PLOT.right - 18;
+  const trunk = timelineTrunkPath(y, TVA_PLOT.left, railEnd);
   const branchMarkup = branches.map((branch, branchIndex) => {
-    const issueX = positions.get(branch.issue.id) || streamStart;
-    const resolutionX = branch.resolution ? positions.get(branch.resolution.id) : null;
-    const branchY = y + 25 + (branchIndex % 2) * 12;
-    const label = `${signalLabel(signalType(branch.issue))} · ${branch.open ? 'open' : 'rejoined'}`;
-    const labelX = Math.max(streamStart + 12, Math.min(issueX + 42, convergenceX - 188));
-    const labelWidth = Math.max(108, Math.min(190, (resolutionX || convergenceX) - labelX - 12));
+    const issueX = Math.max(TVA_PLOT.left, positions.get(branch.issue.id) ?? TVA_PLOT.left);
+    const hasResolution = Boolean(branch.resolution);
+    const resolutionX = hasResolution ? Math.max(issueX + TVA_NODE_GAP + 8, positions.get(branch.resolution.id) ?? issueX) : null;
+    const laneY = y + timelineLaneOffset(branchIndex);
+    const path = hasResolution
+      ? timelineBranchPath(issueX, resolutionX, y, laneY)
+      : timelineOpenBranchPath(issueX, Math.max(issueX + 40, nowX), y, laneY);
+    const label = `${typeLabel(branch.issue.type)} · ${hasResolution ? 'rejoined' : 'open'}`;
+    const labelX = Math.max(issueX + 14, Math.min(issueX + 46, TVA_PLOT.right - 176));
+    const labelWidth = Math.max(96, Math.min(168, (resolutionX || nowX) - labelX - 14));
     const related = branch.related
-      .filter((event) => event.id !== branch.resolution?.id)
+      .filter((event) => event.id !== branch.resolution?.id && positions.has(event.id))
+      .filter((event) => timelineTimeValue(event) >= timelineTimeValue(branch.issue))
       .map((event) => {
-        const eventX = positions.get(event.id) || issueX;
-        const title = `${event.accountName} · ${signalLabel(signalType(event))}\n${event.body}`;
-        return `<g class="tva-branch-node" data-action="open-account" data-account-id="${event.accountId}" tabindex="0" role="button" aria-label="${escapeHtml(title)}"><title>${escapeHtml(title)}</title><circle cx="${eventX}" cy="${branchY}" r="4"></circle></g>`;
+        const eventX = Math.max(issueX + TVA_NODE_GAP, Math.min((resolutionX || nowX) - 8, positions.get(event.id)));
+        const title = timelineNodeTitle(event);
+        return `<g class="tva-branch-node" data-action="open-account" data-account-id="${event.accountId}" tabindex="0" role="button" aria-label="${escapeHtml(timelineTruncate(title, 120))}"><title>${escapeHtml(title)}</title><rect x="${eventX - 5}" y="${laneY - 5}" width="10" height="10" rx="3"></rect></g>`;
       })
       .join('');
-    const rejoin = branch.resolution
-      ? `<g class="tva-rejoin-node" data-action="open-account" data-account-id="${branch.resolution.accountId}" tabindex="0" role="button" aria-label="Resolution and rejoin"><circle cx="${resolutionX}" cy="${y}" r="8"></circle><path d="M ${resolutionX - 4} ${y} l 3 3 l 6 -7"></path></g>`
-      : `<g class="tva-open-branch-end"><circle cx="${Math.min(convergenceX - 12, (resolutionX || convergenceX) - 12)}" cy="${branchY}" r="4"></circle><text x="${Math.min(convergenceX - 12, (resolutionX || convergenceX) - 12)}" y="${branchY - 10}" text-anchor="middle">OPEN</text></g>`;
-    return `<g class="tva-branch ${branch.open ? 'is-open' : 'is-resolved'}"><path class="tva-branch-path" d="${timelineBranchPath(issueX, resolutionX, y, branchY, convergenceX)}"></path><rect class="tva-branch-label-bg" x="${labelX}" y="${branchY - 13}" width="${labelWidth}" height="22" rx="11"></rect><text class="tva-branch-label" x="${labelX + 9}" y="${branchY + 2}">${escapeHtml(timelineTruncate(label, 25))}</text>${related}${rejoin}</g>`;
+    const cap = hasResolution
+      ? `<g class="tva-rejoin-node" data-action="open-account" data-account-id="${branch.resolution.accountId}" tabindex="0" role="button" aria-label="Resolution and rejoin"><title>Rejoined · ${escapeHtml(timelineTruncate(branch.resolution.body, 90))}</title><circle class="tva-rejoin-halo" cx="${resolutionX}" cy="${y}" r="11"></circle><circle class="tva-rejoin-core" cx="${resolutionX}" cy="${y}" r="6.5"></circle></g>`
+      : `<g class="tva-open-branch-end"><line x1="${nowX}" y1="${laneY - 13}" x2="${nowX}" y2="${laneY + 5}"></line><text x="${nowX + 7}" y="${laneY + 4}">OPEN</text></g>`;
+    return `<g class="tva-branch ${hasResolution ? 'is-resolved' : 'is-open'}"><path class="tva-branch-path" d="${path}"></path><rect class="tva-branch-label-bg" x="${labelX}" y="${laneY - 11}" width="${labelWidth}" height="22" rx="11"></rect><text class="tva-branch-label" x="${labelX + 10}" y="${laneY + 4}">${escapeHtml(timelineTruncate(label, 24))}</text>${related}${cap}</g>`;
   }).join('');
-  const nodeMarkup = stream.events.map((event) => {
-    const x = positions.get(event.id);
-    if (!x) return '';
-    const signal = signalType(event);
-    const warning = timelineIsIssue(event);
-    const title = `${event.accountName} · ${event.authorName} · ${signalLabel(signal)}\n${event.body}`;
-    const mark = warning ? `<text class="tva-node-mark" x="${x}" y="${y + 3}" text-anchor="middle">!</text>` : signal === 'resolution' ? `<path class="tva-node-check" d="M ${x - 4} ${y} l 3 3 l 6 -7"></path>` : '';
-    return `<g class="tva-stream-node ${warning ? 'is-issue' : ''} ${signal === 'resolution' ? 'is-resolution' : ''}" data-action="open-account" data-account-id="${event.accountId}" tabindex="0" role="button" aria-label="${escapeHtml(title)}"><title>${escapeHtml(title)}</title><circle class="tva-node-halo" cx="${x}" cy="${y}" r="11"></circle><circle class="tva-node-core signal-node-${signal}" cx="${x}" cy="${y}" r="6"></circle>${mark}</g>`;
-  }).join('');
-  return `<g class="tva-stream tva-stream-${variant}"><rect class="tva-stream-row-bg" x="0" y="${y - 29}" width="${convergenceX - 12}" height="${rowHeight - 10}" rx="10"></rect><text class="tva-stream-label" x="18" y="${y - 4}">${escapeHtml(timelineTruncate(stream.account.name, 24))}</text><text class="tva-stream-owner" x="18" y="${y + 13}">${escapeHtml(firstName(stream.account.ownerName) || stream.account.ownerName)} · ${stream.events.length} events</text><path class="tva-stream-path" d="${mainPath}"></path>${branchMarkup}${nodeMarkup}</g>`;
+  const nodeMarkup = stream.events
+    .filter((event) => positions.has(event.id))
+    .map((event) => {
+      const x = positions.get(event.id);
+      const warning = timelineIsIssue(event);
+      const resolution = timelineIsResolution(event);
+      const correction = event.type === 'correction';
+      const title = timelineNodeTitle(event);
+      const mark = warning ? `<text class="tva-node-mark" x="${x}" y="${y + 4}" text-anchor="middle">!</text>` : resolution ? `<path class="tva-node-check" d="M ${x - 4.5} ${y} l 3 3.5 l 6.5 -8"></path>` : correction ? `<path class="tva-node-spark" d="M ${x} ${y - 5} l 1.6 3.4 l 3.4 1.6 l -3.4 1.6 l -1.6 3.4 l -1.6 -3.4 l -3.4 -1.6 l 3.4 -1.6 z"></path>` : '';
+      return `<g class="tva-stream-node ${warning ? 'is-issue' : ''} ${resolution ? 'is-resolution' : ''} ${correction ? 'is-correction' : ''}" data-action="open-account" data-account-id="${event.accountId}" tabindex="0" role="button" aria-label="${escapeHtml(timelineTruncate(title, 120))}"><title>${escapeHtml(title)}</title><circle class="tva-node-halo" cx="${x}" cy="${y}" r="12"></circle><circle class="tva-node-core signal-node-${event.type}" cx="${x}" cy="${y}" r="6.5"></circle>${mark}</g>`;
+    })
+    .join('');
+  const startCap = `<circle class="tva-trunk-start" cx="${TVA_PLOT.left}" cy="${y}" r="5"></circle>`;
+  const statusLabel = openBranches.length
+    ? `${openBranches.length} open`
+    : branches.length
+      ? 'rejoined'
+      : 'flowing';
+  return `<g class="tva-stream tva-stream-${variant}">`
+    + `<rect class="tva-stream-row-bg" x="0" y="${layout.rowTop + 2}" width="${TVA_PLOT.right + 22}" height="${layout.height - 12}" rx="12"></rect>`
+    + `<text class="tva-stream-label" x="18" y="${y - 4}">${escapeHtml(timelineTruncate(stream.account.name, 22))}</text>`
+    + `<text class="tva-stream-owner" x="18" y="${y + 15}">${escapeHtml(firstName(stream.account.ownerName) || stream.account.ownerName)} · ${stream.events.length} events</text>`
+    + `<text class="tva-stream-flow-state ${openBranches.length ? 'is-open' : ''}" x="${TVA_PLOT.left - 14}" y="${y - 22}">${escapeHtml(statusLabel)}</text>`
+    + `<path class="tva-stream-path" d="${trunk}"></path>${startCap}${branchMarkup}${nodeMarkup}`
+    + `</g>`;
+}
+
+function timelineAxisTicks(minimum, maximum) {
+  const span = maximum - minimum || 24 * 60 * 60 * 1000;
+  const count = Math.max(2, Math.min(7, Math.round(span / (7 * 24 * 60 * 60 * 1000)) + 2));
+  return Array.from({ length: count }, (_, index) => minimum + (span * index) / (count - 1));
 }
 
 function timelineMap(events, accounts, groups) {
@@ -926,61 +1036,106 @@ function timelineMap(events, accounts, groups) {
     .filter((group) => group.streams.length);
   if (!groupedStreams.length) return `<div class="tva-map-empty">No account streams are visible in this scope.</div>`;
 
-  const width = 1800;
-  const streamStart = 290;
-  const convergenceX = 1450;
-  const junctionX = 1515;
-  const masterStart = 1580;
-  const masterEnd = 1770;
-  const top = 64;
-  const groupHeader = 48;
-  const rowHeight = 72;
-  const groupGap = 24;
-  const times = events.map((event) => new Date(event.occurredAt).getTime()).filter(Number.isFinite);
+  const width = 1980;
+  const groupHeader = 52;
+  const groupGap = 22;
+  const convergenceX = TVA_PLOT.right + 40;
+  const junctionX = convergenceX + 74;
+  const masterStart = junctionX + 78;
+  const masterEnd = width - 42;
+  const top = 96;
+
+  const times = events.map(timelineTimeValue).filter((value) => value !== null);
   const minimum = times.length ? Math.min(...times) : Date.now();
   const maximum = times.length ? Math.max(...times) : minimum;
-  const spread = maximum - minimum || 24 * 60 * 60 * 1000;
-  const positions = timelineEventPositions(events, minimum, maximum, spread);
+  const span = maximum - minimum || 24 * 60 * 60 * 1000;
+  const positions = timelineEventPositions(events, minimum, maximum);
+  const nowX = timelinePlotX(Date.now(), minimum, span);
+
   let cursor = top;
   const layouts = groupedStreams.map((group) => {
     const groupTop = cursor;
-    const groupHeight = groupHeader + group.streams.length * rowHeight;
+    let streamCursor = groupTop + groupHeader;
+    const streamLayouts = group.streams.map((stream) => {
+      const height = timelineStreamHeight(timelineBranchModels(stream).length);
+      const layout = { rowTop: streamCursor, height, trunkY: streamCursor + TVA_TRUNK_OFFSET };
+      streamCursor += height;
+      return layout;
+    });
+    const groupHeight = groupHeader + (streamCursor - (groupTop + groupHeader));
     cursor += groupHeight + groupGap;
-    return { ...group, groupTop, groupHeight };
+    return { ...group, groupTop, groupHeight, streamLayouts };
   });
-  const masterY = cursor + 76;
-  const height = masterY + 120;
-  const tickValues = [minimum, minimum + spread / 2, maximum];
-  const axis = tickValues.map((value) => {
-    const x = 300 + ((value - minimum) / spread) * 1060;
-    return `<line class="tva-flow-axis-line" x1="${x}" y1="${top - 24}" x2="${x}" y2="${masterY - 32}"></line><text class="tva-flow-axis-label" x="${x}" y="${top - 34}" text-anchor="middle">${escapeHtml(formatDate(value))}</text>`;
+  const masterY = cursor + 84;
+  const height = masterY + 128;
+  const plotBottom = cursor + 12;
+
+  const ticks = timelineAxisTicks(minimum, maximum);
+  const gridMarkup = ticks.map((value) => {
+    const x = timelinePlotX(value, minimum, span);
+    const label = new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `<line class="tva-flow-gridline" x1="${x}" y1="${top - 46}" x2="${x}" y2="${plotBottom}"></line><text class="tva-flow-axis-label" x="${x}" y="${top - 54}" text-anchor="middle">${escapeHtml(label)}</text>`;
   }).join('');
+  const nowMarkup = nowX <= TVA_PLOT.right + 10
+    ? `<line class="tva-flow-nowline" x1="${nowX}" y1="${top - 46}" x2="${nowX}" y2="${plotBottom}"></line><text class="tva-flow-nowlabel" x="${nowX + 7}" y="${top - 54}">NOW</text>`
+    : '';
+  const axisLine = `<line class="tva-flow-axis" x1="${TVA_PLOT.left}" y1="${top - 46}" x2="${TVA_PLOT.right}" y2="${top - 46}"></line>`;
+
   const groupMarkup = layouts.map((layout) => {
     const accent = cleanClass(layout.user.accent || 'red');
     const branches = layout.streams.flatMap((stream) => timelineBranchModels(stream));
     const openBranches = branches.filter((branch) => branch.open).length;
     const resolvedBranches = branches.length - openBranches;
-    const junctionY = layout.groupTop + groupHeader + Math.max(layout.streams.length * rowHeight / 2, rowHeight / 2);
-    const accountMarkup = layout.streams.map((stream, index) => timelineStreamMarkup(stream, { positions, streamStart, convergenceX, rowTop: layout.groupTop + groupHeader, rowHeight, streamIndex: index })).join('');
-    const bundleMarkup = layout.streams.map((stream, index) => {
-      const y = layout.groupTop + groupHeader + index * rowHeight + rowHeight / 2;
-      return `<path class="tva-group-bundle" d="M ${convergenceX} ${y} C ${convergenceX + 28} ${y}, ${junctionX - 30} ${junctionY}, ${junctionX} ${junctionY}"></path>`;
-    }).join('');
-    const output = `<path class="tva-group-output" d="M ${junctionX} ${junctionY} C ${junctionX + 30} ${junctionY}, ${masterStart - 45} ${masterY}, ${masterStart} ${masterY}"></path>`;
-    const status = openBranches ? `${openBranches} blocking` : resolvedBranches ? `${resolvedBranches} rejoined` : 'flowing';
-    return `<g class="tva-stream-group tva-group-${accent}"><rect class="tva-group-background" x="0" y="${layout.groupTop}" width="${masterStart - 16}" height="${layout.groupHeight}" rx="14"></rect><text class="tva-group-title" x="18" y="${layout.groupTop + 29}">${escapeHtml(timelineGroupUsersLabel(layout.user).toUpperCase())} STREAMS</text><text class="tva-group-meta" x="190" y="${layout.groupTop + 29}">${layout.streams.length} account streams</text><text class="tva-group-status ${openBranches ? 'has-warning' : ''}" x="${masterStart - 30}" y="${layout.groupTop + 29}" text-anchor="end">${escapeHtml(status)}</text>${accountMarkup}${bundleMarkup}<circle class="tva-group-junction ${openBranches ? 'is-blocked' : 'is-flowing'}" cx="${junctionX}" cy="${junctionY}" r="7"></circle>${output}</g>`;
+    const firstY = layout.streamLayouts[0].trunkY;
+    const lastY = layout.streamLayouts[layout.streamLayouts.length - 1].trunkY;
+    const junctionY = layout.streamLayouts.length === 1 ? firstY : firstY + (lastY - firstY) / 2;
+    const accountMarkup = layout.streams
+      .map((stream, index) => timelineStreamMarkup(stream, { positions, minimum, span, nowX, layout: layout.streamLayouts[index], streamIndex: index }))
+      .join('');
+    const bundleMarkup = layout.streams
+      .map((stream, index) => {
+        const y = layout.streamLayouts[index].trunkY;
+        return `<path class="tva-group-bundle" d="M ${TVA_PLOT.right + 4} ${y} C ${convergenceX} ${y}, ${junctionX - 40} ${junctionY}, ${junctionX} ${junctionY}"></path>`;
+      })
+      .join('');
+    const status = openBranches ? `${openBranches} open branch${openBranches === 1 ? '' : 'es'}` : resolvedBranches ? `${resolvedBranches} rejoined` : 'flowing';
+    return `<g class="tva-stream-group tva-group-${accent}">`
+      + `<rect class="tva-group-background" x="0" y="${layout.groupTop}" width="${masterStart - 26}" height="${layout.groupHeight}" rx="16"></rect>`
+      + `<text class="tva-group-title" x="18" y="${layout.groupTop + 31}">${escapeHtml(timelineGroupUsersLabel(layout.user).toUpperCase())} STREAMS</text>`
+      + `<text class="tva-group-meta" x="200" y="${layout.groupTop + 31}">${layout.streams.length} account${layout.streams.length === 1 ? '' : 's'}</text>`
+      + `<text class="tva-group-status ${openBranches ? 'has-warning' : ''}" x="${masterStart - 42}" y="${layout.groupTop + 31}" text-anchor="end">${escapeHtml(status)}</text>`
+      + accountMarkup
+      + bundleMarkup
+      + `<path class="tva-group-output" d="M ${junctionX} ${junctionY} C ${junctionX + 34} ${junctionY}, ${masterStart - 52} ${masterY}, ${masterStart} ${masterY}"></path>`
+      + `<circle class="tva-group-junction ${openBranches ? 'is-blocked' : 'is-flowing'}" cx="${junctionX}" cy="${junctionY}" r="8"></circle>`
+      + `</g>`;
   }).join('');
+
   const allBranches = groupedStreams.flatMap((group) => group.streams.flatMap((stream) => timelineBranchModels(stream)));
   const openBranches = allBranches.filter((branch) => branch.open).length;
   const resolvedBranches = allBranches.length - openBranches;
-  const masterStatus = openBranches ? `${openBranches} branch${openBranches === 1 ? '' : 'es'} blocking convergence` : resolvedBranches ? `${resolvedBranches} branch${resolvedBranches === 1 ? '' : 'es'} rejoined · flow restored` : 'All account streams converging';
-  const masterMarkup = `<g class="tva-master-flow"><rect class="tva-master-background" x="${masterStart - 12}" y="${masterY - 64}" width="${width - masterStart + 12}" height="128" rx="16"></rect><text class="tva-master-kicker" x="${masterStart + 4}" y="${masterY - 34}">MASTER TIMELINE</text><text class="tva-master-status ${openBranches ? 'has-warning' : ''}" x="${masterStart + 4}" y="${masterY - 13}">${escapeHtml(masterStatus)}</text><path class="tva-master-path" d="M ${masterStart} ${masterY} C ${masterStart + 45} ${masterY - 10}, ${masterEnd - 55} ${masterY + 10}, ${masterEnd} ${masterY}" marker-end="url(#tva-master-arrow)"></path><circle class="tva-master-node" cx="${masterStart}" cy="${masterY}" r="8"></circle></g>`;
-  return `<div class="tva-map-scroll tva-flow-map"><svg class="tva-map-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Account streams branching and converging into the Master Timeline"><title>Account streams, branches, and Master Timeline</title><desc>Each account has an independent stream. Issues branch away from normal flow, resolutions rejoin, and account streams converge into the Global Watcher Master Timeline.</desc><defs><marker id="tva-master-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker></defs>${axis}${groupMarkup}${masterMarkup}</svg></div>`;
-}
+  const masterStatus = openBranches
+    ? `${openBranches} branch${openBranches === 1 ? '' : 'es'} blocking convergence`
+    : resolvedBranches
+      ? `${resolvedBranches} branch${resolvedBranches === 1 ? '' : 'es'} rejoined · flow restored`
+      : 'All account streams converging';
+  const masterMarkup = `<g class="tva-master-flow">`
+    + `<rect class="tva-master-background" x="${masterStart - 14}" y="${masterY - 70}" width="${masterEnd - masterStart + 28}" height="140" rx="18"></rect>`
+    + `<text class="tva-master-kicker" x="${masterStart + 4}" y="${masterY - 38}">MASTER TIMELINE</text>`
+    + `<text class="tva-master-status ${openBranches ? 'has-warning' : ''}" x="${masterStart + 4}" y="${masterY - 14}">${escapeHtml(masterStatus)}</text>`
+    + `<path class="tva-master-path" d="M ${masterStart + 4} ${masterY + 34} L ${masterEnd - 26} ${masterY + 34}" marker-end="url(#tva-master-arrow)"></path>`
+    + `<circle class="tva-master-node" cx="${masterStart + 4}" cy="${masterY + 34}" r="9"></circle>`
+    + `</g>`;
 
+  return `<div class="tva-map-scroll tva-flow-map"><svg class="tva-map-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Account streams branching and converging into the Master Timeline"><title>Account streams, branches, and Master Timeline</title><desc>Each account keeps a straight timeline. An issue drops the path onto its own branch rail, follow-up work runs along that rail, and a resolution lifts the rail back into the main flow before the streams converge into the Master Timeline.</desc><defs><marker id="tva-master-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker></defs>${axisLine}${gridMarkup}${nowMarkup}${groupMarkup}${masterMarkup}</svg></div>`;
+}
 function timelineEventCard(update) {
   const signal = signalType(update);
-  return `<button class="tva-event-card" type="button" data-action="open-account" data-account-id="${update.accountId}"><span class="tva-event-card-top">${timelineSignalChip(update)}<span class="timeline-date">${escapeHtml(formatDate(update.occurredAt))}</span></span><strong>${escapeHtml(update.accountName)}</strong><p>${escapeHtml(update.body)}</p><span class="tva-event-card-owner">${avatarHtml(update, 'avatar-small')} ${escapeHtml(update.authorName)} · ${escapeHtml(update.reviewerName ? `review ${update.reviewerName}` : update.reviewStatus === 'approved' ? 'trusted history' : 'in review')}</span></button>`;
+  const canEdit = canEditTimelineAccount(update.accountId);
+  const isLead = state.user?.role === 'lead';
+  const isCorrection = update.type === 'correction' || Boolean(update.correctsUpdateId);
+  const tools = canEdit && !isCorrection ? `<span class="tva-event-card-tools"><button class="button button-ghost" type="button" data-action="correct" data-account-id="${update.accountId}" data-update-id="${update.id}">${icon('check-circle')} Fix</button><button class="button button-ghost button-ghost-danger" type="button" data-action="erase" data-update-id="${update.id}">${icon('trash')} ${isLead ? 'Erase' : 'Request erase'}</button></span>` : '';
+  return `<div class="tva-event-card-wrap"><button class="tva-event-card" type="button" data-action="open-account" data-account-id="${update.accountId}"><span class="tva-event-card-top">${timelineSignalChip(update)}<span class="timeline-date">${escapeHtml(formatDate(update.occurredAt))}</span></span><strong>${escapeHtml(update.accountName)}</strong><p>${escapeHtml(update.body)}</p><span class="tva-event-card-owner">${avatarHtml(update, 'avatar-small')} ${escapeHtml(update.authorName)} · ${escapeHtml(update.reviewerName ? `review ${update.reviewerName}` : update.reviewStatus === 'approved' ? 'trusted history' : 'in review')}</span></button>${tools}</div>`;
 }
 
 function timelineAccountCard(stream) {
@@ -989,10 +1144,18 @@ function timelineAccountCard(stream) {
   return `<button class="tva-account-card ${status.status}" type="button" data-action="open-account" data-account-id="${stream.account.id}"><span class="tva-account-card-top"><span class="account-mark">${escapeHtml(initials(stream.account.name))}</span><span class="tva-account-card-title"><strong>${escapeHtml(stream.account.name)}</strong><small>${escapeHtml(stream.account.partner)}</small></span><span class="tva-stream-status ${status.status}">${escapeHtml(status.label)}</span></span><span class="tva-account-card-meta"><span>${stream.events.length} timeline event${stream.events.length === 1 ? '' : 's'}</span><span>${signals} signal${signals === 1 ? '' : 's'}</span></span><span class="tva-account-card-owner">${escapeHtml(firstName(stream.account.ownerName) || stream.account.ownerName)} · ${status.openBranches ? `${status.openBranches} open branch${status.openBranches === 1 ? '' : 'es'}` : status.resolvedBranches ? 'branch rejoined' : 'normal flow'}</span></button>`;
 }
 
+function canEditTimelineAccount(accountId) {
+  if (state.user?.role === 'lead') return true;
+  const account = timelineAccountLookup().get(Number(accountId));
+  return Boolean(account && (account.ownerId === state.user?.id || account.isMember));
+}
+
 function timelineBranchCard(branch) {
   const signal = signalType(branch.issue);
   const relatedCount = branch.related.filter((event) => event.id !== branch.resolution?.id).length;
-  return `<button class="tva-branch-card ${branch.open ? 'is-open' : 'is-resolved'}" type="button" data-action="open-account" data-account-id="${branch.issue.accountId}"><span class="tva-branch-card-top"><span class="signal-chip signal-chip-${signal}">${icon(signalIcon(signal))}${escapeHtml(signalLabel(signal))}</span><span class="tva-branch-state">${branch.open ? 'Needs resolution' : 'Rejoined'}</span></span><strong>${escapeHtml(branch.issue.accountName)}</strong><p>${escapeHtml(timelineTruncate(branch.issue.body, 110))}</p><span class="tva-branch-card-meta">${relatedCount ? `${relatedCount} follow-up event${relatedCount === 1 ? '' : 's'}` : branch.open ? 'No resolution logged yet' : 'Resolution logged'} · ${escapeHtml(formatDate(branch.issue.occurredAt))}</span></button>`;
+  const canFix = branch.open && canEditTimelineAccount(branch.issue.accountId);
+  const fix = canFix ? `<span class="tva-branch-card-actions"><button class="button button-ghost" type="button" data-action="correct" data-account-id="${branch.issue.accountId}" data-update-id="${branch.issue.id}">${icon('check-circle')} Fix deviation</button></span>` : '';
+  return `<article class="tva-branch-card ${branch.open ? 'is-open' : 'is-resolved'}"><button class="tva-branch-card-open" type="button" data-action="open-account" data-account-id="${branch.issue.accountId}"><span class="tva-branch-card-top"><span class="signal-chip signal-chip-${signal}">${icon(signalIcon(signal))}${escapeHtml(signalLabel(signal))}</span><span class="tva-branch-state">${branch.open ? 'Needs resolution' : 'Rejoined'}</span></span><strong>${escapeHtml(branch.issue.accountName)}</strong><p>${escapeHtml(timelineTruncate(branch.issue.body, 110))}</p><span class="tva-branch-card-meta">${relatedCount ? `${relatedCount} follow-up event${relatedCount === 1 ? '' : 's'}` : branch.open ? 'No resolution logged yet' : 'Resolution logged'} · ${escapeHtml(formatDate(branch.issue.occurredAt))}</span></button>${fix}</article>`;
 }
 
 function timelineGroupSummary(group, streams) {
@@ -1044,11 +1207,25 @@ function renderAccountDetail() {
   if (!payload) return renderLoading();
   const account = payload.account;
   const updates = payload.updates || [];
-  const detailActions = payload.canEdit ? `<div class="detail-actions"><button class="button button-ghost" type="button" data-action="edit-account" data-account-id="${account.id}">${icon('edit')} Edit account</button><button class="button button-primary" type="button" data-action="new-update" data-account-id="${account.id}">${icon('plus')} Log timeline update</button></div>` : '';
+  const erased = payload.erasedUpdates || [];
+  const detailActions = payload.canEdit
+    ? `<div class="detail-actions"><button class="button button-ghost" type="button" data-action="edit-account" data-account-id="${account.id}">${icon('edit')} Edit account</button><button class="button button-ghost" type="button" data-action="correct" data-account-id="${account.id}">${icon('check-circle')} Fix deviation</button><button class="button button-primary" type="button" data-action="new-update" data-account-id="${account.id}">${icon('plus')} Log timeline update</button></div>`
+    : '';
+  const eraseLog = erased.length
+    ? `<section class="panel detail-panel"><div class="panel-header" style="padding:0 0 14px"><div><span class="eyebrow">Erase log · ${erased.length}</span><h2 class="panel-title">What left the record.</h2></div></div><div class="erased-log">${erased.map((entry) => `<div class="erased-log-item"><strong>${escapeHtml(entry.authorName)} · ${escapeHtml(typeLabel(entry.type))}</strong><p>${escapeHtml(timelineTruncate(entry.body, 96))}</p><small>erased by ${escapeHtml(entry.erasedByName)} · ${escapeHtml(formatTimeAgo(entry.erasedAt))}${entry.requestedByName ? ` · asked by ${escapeHtml(entry.requestedByName)}` : ''}</small></div>`).join('')}</div></section>`
+    : '';
   $('#page-content').innerHTML = `
     <button class="back-link" type="button" data-route="accounts">${icon('arrow-left')} Back to account index</button>
     <div class="detail-header"><div><div class="detail-heading"><span class="account-mark">${escapeHtml(initials(account.name))}</span><div><h1>${escapeHtml(account.name)}</h1><p>${escapeHtml(account.partner)} · ${escapeHtml(stageLabel(account.stage))}${account.memberCount > 1 ? ` · ${account.memberCount} timeline keepers` : ''}</p></div></div></div>${detailActions}</div>
-    <div class="detail-layout"><div class="detail-main"><section class="detail-summary"><div class="detail-summary-item"><span>Health signal</span><strong>${statusChip(account.health)}</strong></div><div class="detail-summary-item"><span>Current stage</span><strong>${escapeHtml(stageLabel(account.stage))}</strong></div><div class="detail-summary-item"><span>Next action</span><strong>${escapeHtml(account.nextAction || 'Confirm next milestone')}</strong></div></section><section class="panel timeline-panel"><div class="panel-header"><div><span class="eyebrow">Account timeline</span><h2 class="panel-title">The line of play.</h2><p class="panel-subtitle">Every note stays attached to its author, date, and review state.</p></div><span class="mono-label">${updates.length} events</span></div>${updates.length ? `<div class="timeline-line">${updates.map(timelineEvent).join('')}</div>` : `<div class="timeline-empty">No timeline events yet. Log the first field update to start this account’s line.</div>`}</section></div><div class="detail-side"><section class="panel detail-panel"><div class="panel-header" style="padding:0 0 14px"><div><span class="eyebrow">Account card</span><h2 class="panel-title">Mission details.</h2></div></div><div class="detail-list"><div class="detail-list-row"><span>Account owner</span><strong>${escapeHtml(account.ownerName)}</strong></div><div class="detail-list-row"><span>Next action date</span><strong>${escapeHtml(account.nextActionDate ? formatFullDate(account.nextActionDate) : 'Not set')}</strong></div><div class="detail-list-row"><span>Priority</span><strong>${escapeHtml(account.priority === 'normal' ? 'Standard' : account.priority)}</strong></div><div class="detail-list-row"><span>Source record</span><strong>${escapeHtml(account.sourceFile || 'Manual entry')}</strong></div></div></section><section class="panel detail-panel"><div class="panel-header" style="padding:0 0 14px"><div><span class="eyebrow">Timeline keepers</span><h2 class="panel-title">Account crew.</h2></div></div><div class="member-list">${payload.members.map(memberItem).join('')}</div></section>${routeCard(account)}</div></div>`;
+    <div class="detail-layout"><div class="detail-main">
+      <section class="detail-summary"><div class="detail-summary-item"><span>Health signal</span><strong>${statusChip(account.health)}</strong></div><div class="detail-summary-item"><span>Current stage</span><strong>${escapeHtml(stageLabel(account.stage))}</strong></div><div class="detail-summary-item"><span>Next action</span><strong>${escapeHtml(account.nextAction || 'Confirm next milestone')}</strong></div></section>
+      <section class="panel timeline-panel"><div class="panel-header"><div><span class="eyebrow">Account timeline</span><h2 class="panel-title">The line of play.</h2><p class="panel-subtitle">Every note stays attached to its author, date, and review state. Keepers can fix a deviation or ask the Watcher to erase an entry.</p></div><span class="mono-label">${updates.length} events</span></div>${updates.length ? `<div class="timeline-line">${updates.map(timelineEvent).join('')}</div>` : `<div class="timeline-empty">No timeline events yet. Log the first field update to start this account’s line.</div>`}</section>
+    </div><div class="detail-side">
+      <section class="panel detail-panel"><div class="panel-header" style="padding:0 0 14px"><div><span class="eyebrow">Account card</span><h2 class="panel-title">Mission details.</h2></div></div><div class="detail-list"><div class="detail-list-row"><span>Account owner</span><strong>${escapeHtml(account.ownerName)}</strong></div><div class="detail-list-row"><span>Next action date</span><strong>${escapeHtml(account.nextActionDate ? formatFullDate(account.nextActionDate) : 'Not set')}</strong></div><div class="detail-list-row"><span>Priority</span><strong>${escapeHtml(account.priority === 'normal' ? 'Standard' : account.priority)}</strong></div><div class="detail-list-row"><span>Source record</span><strong>${escapeHtml(account.sourceFile || 'Manual entry')}</strong></div></div></section>
+      <section class="panel detail-panel"><div class="panel-header" style="padding:0 0 14px"><div><span class="eyebrow">Timeline keepers</span><h2 class="panel-title">Account crew.</h2></div></div><div class="member-list">${payload.members.map(memberItem).join('')}</div></section>
+      ${eraseLog}
+      ${routeCard(account)}
+    </div></div>`;
   hydrateIcons($('#page-content'));
 }
 
@@ -1056,7 +1233,25 @@ function timelineEvent(update) {
   const status = update.reviewStatus === 'approved' ? 'approved' : update.reviewStatus === 'changes_requested' ? 'changes' : update.reviewStatus === 'handoff' ? 'handoff' : 'pending';
   const note = update.reviewNote ? `<div class="timeline-review-note ${update.reviewStatus === 'approved' ? 'is-approved' : ''}">${icon(update.reviewStatus === 'approved' ? 'check-circle' : 'send')} <span>${escapeHtml(update.reviewNote)}</span></div>` : '';
   const editAction = update.authorId === state.user?.id && update.reviewStatus === 'changes_requested' ? `<div class="timeline-event-action"><button class="button button-danger" type="button" data-action="edit-update" data-update-id="${update.id}">${icon('edit')} Edit & resubmit</button></div>` : '';
-  return `<article class="timeline-event timeline-event-${status}"><div class="timeline-event-top"><div class="timeline-event-author">${avatarHtml(update, 'avatar-small')}<strong>${escapeHtml(update.authorName)}</strong><span class="timeline-type">${escapeHtml(typeLabel(update.type))}</span></div><span class="timeline-date">${escapeHtml(formatFullDate(update.occurredAt))}</span></div><p class="timeline-event-body">${escapeHtml(update.body)}</p>${note}${editAction}</article>`;
+  const pendingErase = update.deletionState === 'requested';
+  const canEdit = Boolean(state.account?.canEdit);
+  const isLead = state.user?.role === 'lead';
+  const requesterOwnsRequest = pendingErase && (isLead || update.deletionRequestedBy === state.user?.id);
+  const guard = `<article class="timeline-event timeline-event-${status} ${pendingErase ? 'is-erasing' : ''}">
+    <div class="timeline-event-top"><div class="timeline-event-author">${avatarHtml(update, 'avatar-small')}<strong>${escapeHtml(update.authorName)}</strong><span class="timeline-type">${escapeHtml(typeLabel(update.type))}</span></div><span class="timeline-date">${escapeHtml(formatFullDate(update.occurredAt))}</span></div>
+    <p class="timeline-event-body">${escapeHtml(update.body)}</p>`;
+  if (pendingErase) {
+    const cancel = requesterOwnsRequest ? `<button class="button button-ghost" type="button" data-action="cancel-erase" data-update-id="${update.id}">Cancel request</button>` : '';
+    const decide = isLead ? `<button class="button button-ghost" type="button" data-action="erase-decision" data-decision="keep" data-update-id="${update.id}">${icon('check')} Keep entry</button><button class="button button-danger" type="button" data-action="erase-decision" data-decision="erase" data-update-id="${update.id}">${icon('trash')} Erase now</button>` : '';
+    return `${guard}
+    <div class="timeline-erase-state">${icon('trash')}<div><strong>Erase requested${update.deletionRequestedByName ? ` by ${escapeHtml(update.deletionRequestedByName)}` : ''}</strong><p>${escapeHtml(update.deletionReason || 'No reason given')}</p><small>${escapeHtml(formatTimeAgo(update.deletionRequestedAt))} · waiting on the Watcher</small></div><span class="timeline-erase-actions">${cancel}${decide}</span></div>
+    ${note}</article>`;
+  }
+  const correct = canEdit ? `<button class="button button-ghost" type="button" data-action="correct" data-account-id="${update.accountId}" data-update-id="${update.id}">${icon('check-circle')} Fix deviation</button>` : '';
+  const erase = canEdit ? `<button class="button button-ghost button-ghost-danger" type="button" data-action="erase" data-update-id="${update.id}">${icon('trash')} ${isLead ? 'Erase' : 'Request erase'}</button>` : '';
+  const ownedActions = canEdit || editAction ? `<div class="timeline-event-action">${editAction ? `<div>${editAction}</div>` : ''}<div class="timeline-event-tools">${correct}${erase}</div></div>` : '';
+  return `${guard}
+    ${note}${ownedActions}</article>`;
 }
 
 function memberItem(member) {
@@ -1128,6 +1323,42 @@ function openEditAccountModal() {
   const users = state.dashboard?.users || [];
   const isLead = state.user?.role === 'lead';
   openModal(`${modalHeader('Account record', 'Edit account')}<div class="modal-body"><form id="edit-account-form" class="modal-form" data-account-id="${account.id}"><div class="form-grid"><label class="form-field"><span>Account name</span><input name="name" value="${escapeHtml(account.name)}" required></label><label class="form-field"><span>Partner / source</span><input name="partner" value="${escapeHtml(account.partner)}"></label></div><div class="form-grid"><label class="form-field"><span>Owner</span><select name="ownerId" ${isLead ? '' : 'disabled'}>${users.map((user) => `<option value="${user.id}" ${user.id === account.ownerId ? 'selected' : ''}>${escapeHtml(user.name)} · ${escapeHtml(roleLabel(user.role))}</option>`).join('')}</select></label><label class="form-field"><span>Stage</span><select name="stage">${['discovery', 'engagement', 'solutioning', 'proposal', 'poc', 'negotiation', 'on_hold'].map((value) => `<option value="${value}" ${account.stage === value ? 'selected' : ''}>${escapeHtml(stageLabel(value))}</option>`).join('')}</select></label><label class="form-field"><span>Health</span><select name="health">${['new', 'on_track', 'at_risk', 'watch'].map((value) => `<option value="${value}" ${account.health === value ? 'selected' : ''}>${escapeHtml(value.replace('_', ' '))}</option>`).join('')}</select></label><label class="form-field"><span>Priority</span><select name="priority">${['normal', 'high', 'critical'].map((value) => `<option value="${value}" ${account.priority === value ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('')}</select></label></div><div class="form-grid"><label class="form-field"><span>Next action</span><input name="nextAction" value="${escapeHtml(account.nextAction || '')}"></label><label class="form-field"><span>Next action date</span><input name="nextActionDate" type="date" value="${escapeHtml(account.nextActionDate || '')}"></label></div><p class="form-help">Ownership changes are recorded as a visible handoff on the timeline.</p><div class="form-actions"><button class="button button-ghost" type="button" data-action="close-modal">Cancel</button><button class="button button-primary" type="submit">${icon('check')} Save account</button></div></form></div>`);
+}
+
+const pickedAccountUpdates = new Map();
+
+function findTimelineUpdate(updateId) {
+  const id = Number(updateId);
+  return (state.account?.updates || []).find((item) => item.id === id)
+    || (state.dashboard?.reviewQueue || []).find((item) => item.id === id)
+    || (state.dashboard?.eraseRequests || []).find((item) => item.id === id)
+    || timelineEvents().find((item) => item.id === id)
+    || pickedAccountUpdates.get(id)
+    || null;
+}
+
+function openEraseModal(updateId) {
+  const update = findTimelineUpdate(updateId);
+  if (!update) return showToast('Entry unavailable', 'Refresh the timeline and try again.', true);
+  const isLead = state.user?.role === 'lead';
+  openModal(`${modalHeader(isLead ? 'Erase record' : 'Erase request', isLead ? 'Erase this entry now?' : 'Ask the Watcher to erase this')}<div class="modal-body"><form id="erase-form" class="modal-form" data-update-id="${update.id}"><div class="review-modal-update"><strong>${escapeHtml(update.accountName || 'Account timeline')} · ${escapeHtml(update.authorName)} · ${escapeHtml(formatFullDate(update.occurredAt))}</strong>${escapeHtml(update.body)}</div><label class="form-field"><span>Why should this be erased?</span><textarea name="reason" required placeholder="${isLead ? 'Record why this entry is being removed...' : 'Tell the Watcher what is wrong with this entry...'}"></textarea></label><p class="form-help">${isLead ? 'As the Watcher this erases immediately. The entry is kept in a private erase log with your name and the reason.' : 'Nothing is removed yet. The entry stays visible with a pending mark until the Watcher approves the erase.'}</p><div class="form-actions"><button class="button button-ghost" type="button" data-action="close-modal">Cancel</button><button class="button button-danger" type="submit">${icon('trash')} ${isLead ? 'Erase now' : 'Send erase request'}</button></div></form></div>`);
+}
+
+function openEraseDecisionModal(updateId, decision) {
+  const update = findTimelineUpdate(updateId);
+  if (!update) return showToast('Entry unavailable', 'Refresh the queue and try again.', true);
+  const erasing = decision === 'erase';
+  openModal(`${modalHeader('Erase decision', erasing ? 'Erase this entry permanently?' : 'Keep this entry?')}<div class="modal-body"><form id="erase-decision-form" class="modal-form" data-update-id="${update.id}" data-decision="${decision}"><div class="review-modal-update"><strong>${escapeHtml(update.accountName || 'Account timeline')} · ${escapeHtml(update.authorName)} · ${escapeHtml(formatFullDate(update.occurredAt))}</strong>${escapeHtml(update.body)}</div><div class="erase-reason">${icon('send')}<span><strong>${escapeHtml(update.deletionRequestedByName || update.authorName)}</strong> asked to erase this: ${escapeHtml(update.deletionReason || 'no reason given')}</span></div><label class="form-field"><span>${erasing ? 'Erase note' : 'Why are you keeping it?'}</span><textarea name="note" placeholder="${erasing ? 'Optional note for the erase log...' : 'Explain the call to the keeper who asked...'}"></textarea></label><p class="form-help">${erasing ? 'Approving removes the entry from every timeline, the account sheet, and the convergence map. A private erase log keeps a record of what was removed, by whom, and why.' : 'Keeping clears the pending mark and returns the entry to the normal timeline.'}</p><div class="form-actions"><button class="button button-ghost" type="button" data-action="close-modal">Cancel</button><button class="button ${erasing ? 'button-danger' : 'button-success'}" type="submit">${icon(erasing ? 'trash' : 'check')} ${erasing ? 'Erase permanently' : 'Keep entry'}</button></div></form></div>`);
+}
+
+function openCorrectionModal(accountId, updateId) {
+  const account = (state.account?.account?.id === Number(accountId) ? state.account.account : null)
+    || timelineAccountLookup().get(Number(accountId))
+    || (state.dashboard?.accounts || []).find((item) => item.id === Number(accountId));
+  if (!account) return showToast('Account unavailable', 'Refresh the timeline and try again.', true);
+  const target = updateId ? findTimelineUpdate(updateId) : null;
+  const field = (name, label, value, options) => `<label class="form-field"><span>${label}</span><select name="${name}"><option value="">Keep current${value ? ` · ${escapeHtml(value)}` : ''}</option>${options.map((option) => `<option value="${option.value}">${escapeHtml(option.label)}</option>`).join('')}</select></label>`;
+  openModal(`${modalHeader('Keeper correction', 'Fix a deviation')}<div class="modal-body"><form id="correction-form" class="modal-form" data-account-id="${account.id}" data-update-id="${target ? target.id : ''}" data-current-next-action="${escapeHtml(account.nextAction || '')}" data-current-next-action-date="${escapeHtml(account.nextActionDate || '')}"><div class="correction-scope">${icon('spark')}<div><strong>${escapeHtml(account.name)}</strong><p>${escapeHtml(account.partner)} · ${escapeHtml(stageLabel(account.stage))} · ${escapeHtml(healthLabel(account.health))}</p></div></div>${target ? `<div class="correction-target">${icon('layers')}<div><strong>Correcting this entry</strong><p>${escapeHtml(timelineTruncate(target.body, 140))}</p><small>${escapeHtml(formatFullDate(target.occurredAt))} · ${escapeHtml(typeLabel(target.type))}</small></div></div>` : ''}<div class="form-grid">${field('health', 'Correct the health signal', healthLabel(account.health), [{ value: 'on_track', label: 'On track' }, { value: 'at_risk', label: 'At risk' }, { value: 'watch', label: 'Watch' }, { value: 'new', label: 'New' }])}${field('stage', 'Correct the stage', stageLabel(account.stage), ['discovery', 'engagement', 'solutioning', 'proposal', 'poc', 'negotiation', 'on_hold'].map((value) => ({ value, label: stageLabel(value) })))}</div><div class="form-grid"><label class="form-field"><span>Correct the next action</span><input name="nextAction" value="${escapeHtml(account.nextAction || '')}" placeholder="Leave unchanged to keep it"></label><label class="form-field"><span>Correct the next action date</span><input name="nextActionDate" type="date" value="${escapeHtml(account.nextActionDate || '')}"></label></div><label class="form-field"><span>What is the correct picture?</span><textarea name="note" required placeholder="Explain the deviation and what the record should say..."></textarea></label><p class="form-help">Corrections apply immediately and stay visible on the timeline as a trusted correction. ${target ? 'This entry will be treated as resolved, so the branch rejoins the normal flow.' : 'No Watcher review is needed for a correction.'}</p><div class="form-actions"><button class="button button-ghost" type="button" data-action="close-modal">Cancel</button><button class="button button-success" type="submit">${icon('check')} Apply correction</button></div></form></div>`);
 }
 
 function showToast(title, message, isError = false) {
@@ -1258,6 +1489,86 @@ async function submitEditAccount(form) {
   }
 }
 
+async function submitErase(form) {
+  const values = formObject(form);
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  const isLead = state.user?.role === 'lead';
+  try {
+    const payload = await api(`/api/updates/${form.dataset.updateId}/erase`, { method: 'POST', body: { reason: values.reason || '' } });
+    closeModal();
+    await loadDashboard();
+    if (payload.erased) showToast('Entry erased', 'It is gone from every timeline and kept in the private erase log.');
+    else showToast('Erase request sent', 'The entry stays visible until the Watcher approves.');
+    if (state.route === 'account-detail' && state.account) await openAccount(state.account.account.id);
+    else renderPage();
+  } catch (error) {
+    showToast('Erase request failed', error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function submitEraseDecision(form) {
+  const values = formObject(form);
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  const erasing = form.dataset.decision === 'erase';
+  try {
+    await api(`/api/updates/${form.dataset.updateId}/erase-decision`, { method: 'POST', body: { decision: form.dataset.decision, note: values.note || '' } });
+    closeModal();
+    await loadDashboard();
+    showToast(erasing ? 'Entry erased' : 'Entry kept', erasing ? 'It has been removed from every timeline.' : 'The entry is back on the normal timeline.');
+    if (state.route === 'account-detail' && state.account) await openAccount(state.account.account.id);
+    else renderPage();
+  } catch (error) {
+    showToast('Erase decision failed', error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function cancelErase(updateId) {
+  try {
+    await api(`/api/updates/${updateId}/erase`, { method: 'DELETE' });
+    await loadDashboard();
+    showToast('Request cancelled', 'The entry is back on the normal timeline.');
+    if (state.route === 'account-detail' && state.account) await openAccount(state.account.account.id);
+    else renderPage();
+  } catch (error) {
+    showToast('Could not cancel the request', error.message, true);
+  }
+}
+
+async function submitCorrection(form) {
+  const values = formObject(form);
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    const payload = await api(`/api/accounts/${form.dataset.accountId}/corrections`, {
+      method: 'POST',
+      body: {
+        health: values.health || '',
+        stage: values.stage || '',
+        nextAction: (values.nextAction || '') === form.dataset.currentNextAction ? undefined : (values.nextAction || ''),
+        nextActionDate: (values.nextActionDate || '') === form.dataset.currentNextActionDate ? undefined : (values.nextActionDate || ''),
+        note: values.note || '',
+        correctsUpdateId: form.dataset.updateId || ''
+      }
+    });
+    closeModal();
+    await loadDashboard();
+    showToast('Correction applied', 'The record is corrected and the correction is now trusted timeline history.');
+    if (form.dataset.updateId && payload.correction) await openAccount(form.dataset.accountId);
+    else if (state.route === 'account-detail' && state.account) await openAccount(state.account.account.id);
+    else renderPage();
+  } catch (error) {
+    showToast('Correction failed', error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function handleAction(actionElement) {
   const action = actionElement.dataset.action;
   if (action === 'close-modal') return closeModal();
@@ -1276,6 +1587,11 @@ function handleAction(actionElement) {
   if (action === 'edit-account') return openEditAccountModal();
   if (action === 'open-account') return openAccount(actionElement.dataset.accountId);
   if (action === 'review') return openReviewModal(actionElement.dataset.updateId, actionElement.dataset.reviewAction);
+  if (action === 'erase') return openEraseModal(actionElement.dataset.updateId);
+  if (action === 'erase-decision') return openEraseDecisionModal(actionElement.dataset.updateId, actionElement.dataset.decision);
+  if (action === 'cancel-erase') return cancelErase(actionElement.dataset.updateId);
+  if (action === 'correct') return openCorrectionModal(actionElement.dataset.accountId, actionElement.dataset.updateId);
+  if (action === 'pick-erase') return openAccountErasePicker(actionElement.dataset.accountId);
   if (action === 'logout') return logout();
 }
 
@@ -1430,6 +1746,9 @@ function handleSubmit(event) {
   if (form.id === 'review-form') return submitReview(form);
   if (form.id === 'edit-update-form') return submitEditUpdate(form);
   if (form.id === 'edit-account-form') return submitEditAccount(form);
+  if (form.id === 'erase-form') return submitErase(form);
+  if (form.id === 'erase-decision-form') return submitEraseDecision(form);
+  if (form.id === 'correction-form') return submitCorrection(form);
 }
 
 function bindEvents() {

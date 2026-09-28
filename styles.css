@@ -44,6 +44,33 @@
   --focus-ring: 0 0 0 2px var(--paper), 0 0 0 4px var(--red);
   --grid-line: rgba(17, 17, 20, 0.09);
 
+  /* Flippable surface states. Chrome, hover washes, sheet headers and card fills
+     used to be raw light hex, which is exactly how a dark theme ends up with
+     cream patches still sitting in it. Every one of them is a token now. */
+  --chrome: rgba(244, 240, 232, 0.9);
+  --paper-hover: #f8f5ef;
+  --paper-header: #eee9e0;
+  --paper-gutter: #e5dfd4;
+  --paper-gutter-soft: #f0ece4;
+  --paper-gutter-hover: #faf8f3;
+  --paper-gutter-active: #f7f2e9;
+  --paper-editor: #fffdf8;
+  --paper-wash: rgba(232, 226, 215, 0.4);
+  --paper-wash-soft: rgba(232, 226, 215, 0.28);
+  --amber-wash: #ffe3d5;
+  --card-fill: rgba(251, 250, 247, 0.88);
+  --card-fill-strong: rgba(251, 250, 247, 0.95);
+
+  /* Ink for text sitting on a --*-pale chip. The pale flips in dark mode, so the
+     ink has to flip with it or a green chip ends up as dark green on dark green. */
+  --red-ink: #a91721;
+  --gold-ink: #866000;
+  --blue-ink: #25518e;
+  --violet-ink: #57388d;
+  --green-ink: #0b6848;
+  --amber-ink: #a53b16;
+  --neutral-ink: #a4a1a0;
+
   /* Spacing and elevation scale */
   --space-1: 4px;
   --space-2: 8px;
@@ -103,6 +130,28 @@
   --grid-line: rgba(255, 255, 255, 0.1);
   --elev-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4);
   --elev-4: 0 30px 70px rgba(0, 0, 0, 0.7);
+
+  --chrome: rgba(23, 23, 29, 0.86);
+  --paper-hover: #1e1e26;
+  --paper-header: #23232b;
+  --paper-gutter: #2a2a33;
+  --paper-gutter-soft: #1f1f27;
+  --paper-gutter-hover: #2f2f39;
+  --paper-gutter-active: #26262f;
+  --paper-editor: #1c1c24;
+  --paper-wash: rgba(255, 255, 255, 0.05);
+  --paper-wash-soft: rgba(255, 255, 255, 0.04);
+  --amber-wash: #3a2313;
+  --card-fill: rgba(38, 38, 47, 0.9);
+  --card-fill-strong: rgba(28, 28, 35, 0.95);
+
+  --red-ink: #ff9b98;
+  --gold-ink: #f7c455;
+  --blue-ink: #9cc4ff;
+  --violet-ink: #cbb1fb;
+  --green-ink: #7fe0b8;
+  --amber-ink: #f0a860;
+  --neutral-ink: #9a968f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -141,6 +190,26 @@
     --grid-line: rgba(255, 255, 255, 0.1);
     --elev-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4);
     --elev-4: 0 30px 70px rgba(0, 0, 0, 0.7);
+    --chrome: rgba(23, 23, 29, 0.86);
+    --paper-hover: #1e1e26;
+    --paper-header: #23232b;
+    --paper-gutter: #2a2a33;
+    --paper-gutter-soft: #1f1f27;
+    --paper-gutter-hover: #2f2f39;
+    --paper-gutter-active: #26262f;
+    --paper-editor: #1c1c24;
+    --paper-wash: rgba(255, 255, 255, 0.05);
+    --paper-wash-soft: rgba(255, 255, 255, 0.04);
+    --amber-wash: #3a2313;
+    --card-fill: rgba(38, 38, 47, 0.9);
+    --card-fill-strong: rgba(28, 28, 35, 0.95);
+    --red-ink: #ff9b98;
+    --gold-ink: #f7c455;
+    --blue-ink: #9cc4ff;
+    --violet-ink: #cbb1fb;
+    --green-ink: #7fe0b8;
+    --amber-ink: #f0a860;
+    --neutral-ink: #9a968f;
   }
 }
 
@@ -421,13 +490,13 @@ textarea {
 
 input::placeholder,
 textarea::placeholder {
-  color: #a4a1a0;
+  color: var(--neutral-ink);
 }
 
 .form-error {
   min-height: 18px;
   margin: -3px 0 0;
-  color: #ff9b98;
+  color: var(--red-ink);
   font-size: 12px;
 }
 
@@ -483,7 +552,7 @@ textarea::placeholder {
 }
 
 .button-success {
-  color: #0c6245;
+  color: var(--green-ink);
   background: var(--green-pale);
   border-color: rgba(53, 174, 130, 0.22);
 }
@@ -866,7 +935,7 @@ textarea::placeholder {
   justify-content: space-between;
   min-height: 74px;
   padding: 0 clamp(20px, 3vw, 48px);
-  background: rgba(244, 240, 232, 0.9);
+  background: var(--chrome);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(14px);
 }
@@ -905,7 +974,7 @@ textarea::placeholder {
   height: 38px;
   padding: 0 12px;
   color: var(--ink-muted);
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--paper-hover);
   border: 1px solid var(--line);
   border-radius: 99px;
 }
@@ -1296,7 +1365,7 @@ textarea::placeholder {
 }
 
 .account-row:hover {
-  background: #f8f5ef;
+  background: var(--paper-hover);
 }
 
 .account-identity {
@@ -1378,10 +1447,10 @@ textarea::placeholder {
 }
 
 .avatar-red { background: var(--red-pale); color: var(--red-deep); }
-.avatar-gold { background: var(--gold-pale); color: #7c5700; }
-.avatar-blue { background: var(--blue-pale); color: #25518e; }
-.avatar-violet { background: var(--violet-pale); color: #57388d; }
-.avatar-green { background: var(--green-pale); color: #0b6848; }
+.avatar-gold { background: var(--gold-pale); color: var(--gold-ink); }
+.avatar-blue { background: var(--blue-pale); color: var(--blue-ink); }
+.avatar-violet { background: var(--violet-pale); color: var(--violet-ink); }
+.avatar-green { background: var(--green-pale); color: var(--green-ink); }
 
 .status-chip {
   display: inline-flex;
@@ -1405,17 +1474,17 @@ textarea::placeholder {
   content: '';
 }
 
-.status-chip-on-track { color: #0b7651; background: var(--green-pale); border-color: rgba(53, 174, 130, 0.18); }
-.status-chip-at-risk { color: #a53b16; background: #ffe3d5; border-color: rgba(215, 136, 24, 0.18); }
+.status-chip-on-track { color: var(--green-ink); background: var(--green-pale); border-color: rgba(53, 174, 130, 0.18); }
+.status-chip-at-risk { color: var(--amber-ink); background: var(--amber-wash); border-color: rgba(215, 136, 24, 0.18); }
 .status-chip-watch,
-.status-chip-new { color: #6c57a0; background: var(--violet-pale); border-color: rgba(155, 117, 231, 0.2); }
+.status-chip-new { color: var(--violet-ink); background: var(--violet-pale); border-color: rgba(155, 117, 231, 0.2); }
 .status-chip-pending,
-.status-chip-pending-review { color: #866000; background: var(--gold-pale); border-color: rgba(242, 181, 43, 0.28); }
-.status-chip-approved { color: #0b7651; background: var(--green-pale); border-color: rgba(53, 174, 130, 0.18); }
+.status-chip-pending-review { color: var(--gold-ink); background: var(--gold-pale); border-color: rgba(242, 181, 43, 0.28); }
+.status-chip-approved { color: var(--green-ink); background: var(--green-pale); border-color: rgba(53, 174, 130, 0.18); }
 .status-chip-changes_requested,
-.status-chip-changes-requested { color: #a91721; background: var(--red-pale); border-color: rgba(169, 23, 33, 0.18); }
-.status-chip-handoff { color: #25518e; background: var(--blue-pale); border-color: rgba(93, 150, 245, 0.2); }
-.status-changes { color: #a91721; background: var(--red-pale); border-color: rgba(169, 23, 33, 0.2); }
+.status-chip-changes-requested { color: var(--red-ink); background: var(--red-pale); border-color: rgba(169, 23, 33, 0.18); }
+.status-chip-handoff { color: var(--blue-ink); background: var(--blue-pale); border-color: rgba(93, 150, 245, 0.2); }
+.status-changes { color: var(--red-ink); background: var(--red-pale); border-color: rgba(169, 23, 33, 0.2); }
 
 .row-chevron {
   color: var(--ink-muted);
@@ -1447,7 +1516,7 @@ textarea::placeholder {
   padding: 14px 20px;
   color: var(--ink-muted);
   text-align: left;
-  background: rgba(232, 226, 215, 0.4);
+  background: var(--paper-wash);
   font-family: var(--mono);
   font-size: 9px;
   font-weight: 500;
@@ -1467,7 +1536,7 @@ textarea::placeholder {
 }
 
 .account-table tbody tr:hover {
-  background: #f8f5ef;
+  background: var(--paper-hover);
 }
 
 .table-account-cell {
@@ -1659,7 +1728,7 @@ textarea::placeholder {
   padding: 0;
   color: var(--ink-muted);
   text-align: left;
-  background: #eee9e0;
+  background: var(--paper-header);
   font-family: var(--mono);
   font-size: 8px;
   font-weight: 500;
@@ -1674,7 +1743,7 @@ textarea::placeholder {
   justify-content: center;
   width: 42px;
   color: var(--ink-muted);
-  background: #e5dfd4;
+  background: var(--paper-gutter);
   text-align: center;
 }
 
@@ -1685,7 +1754,7 @@ textarea::placeholder {
   width: 42px;
   padding: 0;
   color: var(--ink-muted);
-  background: #f0ece4;
+  background: var(--paper-gutter-soft);
   font-family: var(--mono);
   font-size: 9px;
   font-weight: 500;
@@ -1694,12 +1763,12 @@ textarea::placeholder {
 
 .account-sheet tbody tr:hover td:not(.is-selected),
 .account-sheet tbody tr:hover .account-sheet-row-number {
-  background: #faf8f3;
+  background: var(--paper-gutter-hover);
 }
 
 .account-sheet tbody tr.is-selected td:not(.is-selected),
 .account-sheet tbody tr.is-selected .account-sheet-row-number {
-  background: #f7f2e9;
+  background: var(--paper-gutter-active);
 }
 
 .account-sheet-cell {
@@ -1739,7 +1808,7 @@ textarea::placeholder {
 
 .sheet-cell.is-editable:hover {
   color: var(--ink);
-  background: #fffdf8;
+  background: var(--paper-editor);
 }
 
 .sheet-cell.is-editable:hover .sheet-cell-edit-hint,
@@ -1813,7 +1882,7 @@ textarea::placeholder {
 }
 
 .sheet-review-count.has-pending {
-  color: #866000;
+  color: var(--gold-ink);
   background: var(--gold-pale);
 }
 
@@ -1837,7 +1906,7 @@ textarea::placeholder {
 button.sheet-column-heading:hover,
 button.sheet-column-heading.is-active {
   color: var(--ink);
-  background: rgba(255, 253, 248, 0.62);
+  background: var(--paper-wash);
 }
 
 .sheet-sort-indicator {
@@ -1944,7 +2013,7 @@ button.sheet-column-heading.is-active {
 
 .timeline-pending-chip {
   padding: 4px 9px;
-  color: #8a6410;
+  color: var(--gold-ink);
   background: rgba(197, 148, 20, 0.16);
   border: 1px solid rgba(197, 148, 20, 0.3);
   border-radius: 999px;
@@ -1984,7 +2053,7 @@ button.sheet-column-heading.is-active {
   margin: 5px;
   padding: 0 8px;
   color: var(--ink);
-  background: #fffdf8;
+  background: var(--paper-editor);
   border: 1px solid var(--red);
   border-radius: 4px;
   outline: 0;
@@ -2003,7 +2072,7 @@ select.account-sheet-editor {
   min-height: 38px;
   padding: 0 16px;
   color: var(--ink-muted);
-  background: #f0ece4;
+  background: var(--paper-gutter-soft);
   font-family: var(--mono);
   font-size: 8px;
   letter-spacing: 0.03em;
@@ -2273,14 +2342,14 @@ select.account-sheet-editor {
   max-width: 650px;
   margin-top: 10px;
   padding: 8px 10px;
-  color: #7f560b;
+  color: var(--gold-ink);
   background: var(--gold-pale);
   border-left: 3px solid var(--gold);
   font-size: 11px;
 }
 
 .timeline-review-note.is-approved {
-  color: #0b6848;
+  color: var(--green-ink);
   background: var(--green-pale);
   border-color: var(--green);
 }
@@ -3177,7 +3246,7 @@ select.account-sheet-editor {
 }
 
 .tva-event-card:last-child { border-bottom: 0; }
-.tva-event-card:hover { background: #f8f5ef; }
+.tva-event-card:hover { background: var(--paper-hover); }
 .tva-event-card-top { justify-content: space-between; }
 .tva-event-card > strong { font-size: 12px; }
 .tva-event-card > p { margin: 0; color: var(--ink-muted); font-size: 11px; line-height: 1.45; }
@@ -3199,13 +3268,13 @@ select.account-sheet-editor {
 }
 
 .signal-chip [data-icon] { width: 12px; height: 12px; }
-.signal-chip-task { color: #25518e; background: var(--blue-pale); }
-.signal-chip-issue { color: #866000; background: var(--gold-pale); }
+.signal-chip-task { color: var(--blue-ink); background: var(--blue-pale); }
+.signal-chip-issue { color: var(--gold-ink); background: var(--gold-pale); }
 .signal-chip-roadblock { color: var(--red-deep); background: var(--red-pale); }
-.signal-chip-milestone { color: #0b6848; background: var(--green-pale); }
-.signal-chip-meeting { color: #57388d; background: var(--violet-pale); }
+.signal-chip-milestone { color: var(--green-ink); background: var(--green-pale); }
+.signal-chip-meeting { color: var(--violet-ink); background: var(--violet-pale); }
 .signal-chip-check-in { color: var(--ink-muted); background: var(--paper-deep); }
-.signal-chip-resolution { color: #0b6848; background: var(--green-pale); }
+.signal-chip-resolution { color: var(--green-ink); background: var(--green-pale); }
 
 .tva-stat-strip-five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 
@@ -3249,7 +3318,7 @@ select.account-sheet-editor {
 }
 
 .tva-flow-nowlabel {
-  fill: #8a6100;
+  fill: var(--gold-ink);
   font-family: var(--mono);
   font-size: 9px;
   font-weight: 700;
@@ -3257,7 +3326,7 @@ select.account-sheet-editor {
 }
 
 .tva-group-background {
-  fill: rgba(232, 226, 215, 0.34);
+  fill: var(--paper-wash);
   stroke: var(--line);
   stroke-width: 1;
 }
@@ -3312,7 +3381,7 @@ select.account-sheet-editor {
 .tva-group-junction.is-blocked { fill: var(--red); }
 
 .tva-stream-row-bg {
-  fill: rgba(251, 250, 247, 0.86);
+  fill: var(--card-fill);
   stroke: rgba(17, 17, 20, 0.08);
   stroke-width: 1;
 }
@@ -3378,7 +3447,7 @@ select.account-sheet-editor {
 }
 
 .tva-branch-label-bg {
-  fill: rgba(251, 250, 247, 0.94);
+  fill: var(--card-fill-strong);
   stroke: rgba(227, 38, 46, 0.4);
   stroke-width: 1;
 }
@@ -3394,7 +3463,7 @@ select.account-sheet-editor {
   text-transform: uppercase;
 }
 
-.tva-branch.is-resolved .tva-branch-label { fill: #0b6848; }
+.tva-branch.is-resolved .tva-branch-label { fill: var(--green-ink); }
 
 .tva-branch-node { cursor: pointer; }
 .tva-branch-node rect {
@@ -3441,7 +3510,7 @@ select.account-sheet-editor {
 .tva-master-background { fill: var(--ink-soft); stroke: rgba(242, 181, 43, 0.52); stroke-width: 1.5; filter: drop-shadow(0 8px 8px rgba(17, 17, 20, 0.12)); }
 .tva-master-kicker { fill: var(--gold); font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; }
 .tva-master-status { fill: var(--paper-bright); font-family: var(--display); font-size: 15px; font-weight: 800; letter-spacing: -0.03em; }
-.tva-master-status.has-warning { fill: #ff9ca0; }
+.tva-master-status.has-warning { fill: var(--red-ink); }
 .tva-master-path { fill: none; stroke: var(--gold); stroke-linecap: round; stroke-width: 3; }
 .tva-master-node { fill: var(--gold); stroke: var(--ink); stroke-width: 3; }
 #tva-master-arrow path { fill: var(--gold); }
@@ -3481,10 +3550,10 @@ select.account-sheet-editor {
 .tva-master-group-top strong { overflow: hidden; font-family: var(--display); font-size: 14px; letter-spacing: -0.04em; text-overflow: ellipsis; white-space: nowrap; }
 .tva-master-group-mark { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px; font-family: var(--display); font-size: 14px; font-weight: 800; }
 .tva-master-group-mark.tva-group-red { color: var(--red-deep); background: var(--red-pale); }
-.tva-master-group-mark.tva-group-gold { color: #7c5700; background: var(--gold-pale); }
-.tva-master-group-mark.tva-group-blue { color: #25518e; background: var(--blue-pale); }
-.tva-master-group-mark.tva-group-violet { color: #57388d; background: var(--violet-pale); }
-.tva-master-group-mark.tva-group-green { color: #0b6848; background: var(--green-pale); }
+.tva-master-group-mark.tva-group-gold { color: var(--gold-ink); background: var(--gold-pale); }
+.tva-master-group-mark.tva-group-blue { color: var(--blue-ink); background: var(--blue-pale); }
+.tva-master-group-mark.tva-group-violet { color: var(--violet-ink); background: var(--violet-pale); }
+.tva-master-group-mark.tva-group-green { color: var(--green-ink); background: var(--green-pale); }
 
 .tva-master-group-bottom {
   display: flex;
@@ -3507,9 +3576,9 @@ select.account-sheet-editor {
 .tva-account-card.blocked { background: linear-gradient(135deg, var(--paper), var(--red-pale)); border-color: rgba(227, 38, 46, 0.24); }
 .tva-account-card.rejoined { background: linear-gradient(135deg, var(--paper), var(--green-pale)); border-color: rgba(53, 174, 130, 0.24); }
 .tva-stream-status { margin-left: auto; padding: 4px 6px; border-radius: 5px; font-family: var(--mono); font-size: 8px; letter-spacing: 0.04em; text-transform: uppercase; }
-.tva-stream-status.flowing { color: #0b6848; background: var(--green-pale); }
+.tva-stream-status.flowing { color: var(--green-ink); background: var(--green-pale); }
 .tva-stream-status.blocked { color: var(--red-deep); background: var(--red-pale); }
-.tva-stream-status.rejoined { color: #0b6848; background: var(--green-pale); }
+.tva-stream-status.rejoined { color: var(--green-ink); background: var(--green-pale); }
 
 .tva-branch-list {
   display: grid;
@@ -3537,7 +3606,7 @@ select.account-sheet-editor {
 .tva-branch-card > strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .tva-branch-card > p { min-height: 32px; margin: 0; color: var(--ink-muted); font-size: 10px; line-height: 1.45; }
 .tva-branch-state { color: var(--red-deep); font-family: var(--mono); font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; }
-.tva-branch-card.is-resolved .tva-branch-state { color: #0b6848; }
+.tva-branch-card.is-resolved .tva-branch-state { color: var(--green-ink); }
 .tva-branch-card-meta { color: var(--ink-muted); font-family: var(--mono); font-size: 8px; line-height: 1.45; }
 
 @media (max-width: 1180px) {
@@ -3902,7 +3971,7 @@ select.account-sheet-editor {
 }
 
 .timeline-event.is-erasing {
-  background: repeating-linear-gradient(135deg, rgba(249, 217, 214, 0.5), rgba(249, 217, 214, 0.5) 10px, rgba(251, 250, 247, 0.86) 10px, rgba(251, 250, 247, 0.86) 20px);
+  background: repeating-linear-gradient(135deg, var(--red-pale) 0 10px, var(--card-fill) 10px 20px);
   border-color: rgba(227, 38, 46, 0.34);
   opacity: 0.92;
 }
@@ -4048,7 +4117,7 @@ select.account-sheet-editor {
   padding: 9px 10px;
   border: 1px dashed var(--line-strong);
   border-radius: 9px;
-  background: rgba(232, 226, 215, 0.28);
+  background: var(--paper-wash-soft);
 }
 
 .erased-log-item strong { font-size: 11px; }

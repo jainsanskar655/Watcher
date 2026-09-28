@@ -1,59 +1,85 @@
 /*
- * Watcher HQ — one theme, built from the five timeline stream colours.
+ * Watcher HQ — "after hours".
  *
- * The TVA timeline is the product, so the app is not allowed to invent its own
- * palette. The same five signals drive the timeline, the status chips, the
- * avatars and the group badges, and they keep the same meaning everywhere:
+ * The visual language is taken from the music-concept landing page in
+ * music-concept-landing-page-template: a deep indigo night, violet depth, a
+ * single warm lemon-gold accent, and Syne/Inter typography. Only the theme was
+ * taken from that artwork; none of its content, copy or layout came with it.
  *
- *   red = blocked, at risk, erasing      amber = needs attention
- *   green = flowing, resolved, approved  blue  = open, active, informational
+ * The TVA timeline is still the product, so the five streams keep their
+ * meanings and are the only other colours in the app:
+ *
+ *   red = blocked, at risk, erasing       amber = needs attention
+ *   green = flowing, resolved, approved   blue  = open, active
  *   violet = milestone, handoff
  *
- * Actions are ink, not colour. An earlier version made red the accent, which
- * meant a red "Create account" button sat next to a red "blocked" chip and the
- * two meant opposite things. Now the five hues only ever signal, and the near
- * black ink carries every button, link, active tab and focus ring.
+ * Division of labour, which is the part worth protecting:
+ *   --accent (lemon gold) = anything the user can act on. Primary buttons, the
+ *                           active nav marker, focus rings, the brand mark.
+ *   the five hues         = stream state only. Never a button, never a link.
  *
- * Each hue has three tiers and they are used consistently:
- *   --<hue>       saturated: strokes, dots, bars, SVG fills
- *   --<hue>-pale  the chip / card fill
- *   --<hue>-ink   text on that fill, and text on the page
+ * That split is why the gold is safe to use for every action: a gold "Create
+ * account" button can never be confused with a red "blocked" chip, because
+ * gold is not one of the five.
  *
- * Hue spacing is even (45, 100, 72, 70, 73 degrees) and the old gold/amber
- * pair, which were two near-identical yellows doing different jobs, is now one
- * amber. Every value below was checked for contrast: ink on page is at least
- * 5.5:1 and ink on its own pale is at least 5.5:1.
+ * Ground and type swap roles compared to a light theme: --ink is now the
+ * primary type colour and --paper is the page. Per hue:
+ *   --<hue>       neon stroke, dot, bar, SVG fill
+ *   --<hue>-ink   bright text tier, legible on the ground and on a tint
+ *   --<hue>-pale  translucent tint for chips and card fills
  */
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  /* Neutrals: a cool neutral rather than the old warm cream. */
-  --ink: #171a20;
-  --ink-deep: #0b0d11;
-  --ink-soft: #3b4149;
-  --ink-muted: #6b7280;
-  --paper: #f4f5f7;
-  --paper-bright: #ffffff;
-  --paper-deep: #e8eaee;
-  --line: rgba(23, 26, 32, 0.12);
-  --line-strong: rgba(23, 26, 32, 0.22);
+  /*
+   * Ground. The brand is drawn from a music-concept landing page whose whole
+   * surface sits in a 240-285 degree indigo band, so the page is that indigo
+   * rather than a light neutral, and the type is white on it.
+   */
+  --paper: #0a0820;
+  --paper-bright: #141038;
+  --paper-deep: #0d0a2c;
+  --ink: #f4f2ff;
+  --ink-soft: #bcb5e0;
+  --ink-muted: #837cae;
+  --ink-deep: #06041a;
+  --line: rgba(244, 242, 255, 0.1);
+  --line-strong: rgba(244, 242, 255, 0.2);
 
-  /* The five streams. */
-  --red: #d93a47;
-  --red-ink: #b4222e;
-  --red-pale: #faedee;
-  --amber: #c28b0a;
-  --amber-ink: #805c07;
-  --amber-pale: #faf6ed;
-  --green: #319b54;
-  --green-ink: #23703d;
-  --green-pale: #eef9f2;
-  --blue: #2376d5;
-  --blue-ink: #1d61af;
-  --blue-pale: #edf3fa;
-  --violet: #a650cb;
-  --violet-ink: #8231a5;
-  --violet-pale: #f6eef9;
+  /*
+   * The one warm note in that artwork is a pale lemon gold, and it is the only
+   * thing allowed to mean "do this": primary buttons, the active nav marker,
+   * focus rings and the brand mark. Nothing in the timeline ever uses it.
+   */
+  --accent: #f0e27a;
+  --accent-ink: #fdf6c4;
+  --accent-pale: rgba(240, 226, 122, 0.14);
+  --accent-contrast: #141038;
+
+  /*
+   * The five streams, re-tuned as neons so they hold up on indigo. Their
+   * meanings are unchanged from the light theme:
+   *   red = blocked, at risk, erasing       amber = needs attention
+   *   green = flowing, resolved, approved   blue  = open, active
+   *   violet = milestone, handoff
+   * The tiers changed meaning with the ground: -ink is now the bright text
+   * tier, and -pale is a translucent tint rather than a solid light fill.
+   */
+  --red: #ff6485;
+  --red-ink: #f7c2ce;
+  --red-pale: rgba(255, 100, 133, 0.14);
+  --amber: #ecab05;
+  --amber-ink: #f2dca5;
+  --amber-pale: rgba(236, 171, 5, 0.14);
+  --green: #02b14b;
+  --green-ink: #5de997;
+  --green-pale: rgba(2, 177, 75, 0.14);
+  --blue: #539afd;
+  --blue-ink: #b9d2f6;
+  --blue-pale: rgba(83, 154, 253, 0.14);
+  --violet: #d869fd;
+  --violet-ink: #eac3f7;
+  --violet-pale: rgba(216, 105, 253, 0.14);
 
   /* Backwards compatible aliases. Gold and amber used to be two different
      yellows doing the same job; they are one colour now. */
@@ -64,42 +90,41 @@
   --neutral-ink: var(--ink-muted);
   --amber-wash: var(--amber-pale);
 
-  --shadow-sm: 0 8px 20px rgba(23, 26, 32, 0.06);
-  --shadow-md: 0 18px 42px rgba(23, 26, 32, 0.12);
+  --shadow-sm: 0 8px 24px rgba(4, 2, 16, 0.55);
+  --shadow-md: 0 22px 52px rgba(4, 2, 16, 0.68);
+  --glow: 0 0 0 1px rgba(240, 226, 122, 0.4), 0 10px 30px rgba(240, 226, 122, 0.2);
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 22px;
-  --display: 'Syne', 'Arial Black', sans-serif;
-  --body: 'Space Grotesk', 'Segoe UI', sans-serif;
+  --display: 'Syne', 'Sora', 'Arial Black', sans-serif;
+  --body: 'Inter', 'Segoe UI', sans-serif;
   --mono: 'DM Mono', 'Consolas', monospace;
 
   /* Semantic layer. */
   --surface: var(--paper-bright);
-  --surface-raised: #ffffff;
+  --surface-raised: #1a1548;
   --surface-sunken: var(--paper-deep);
-  --surface-inverse: #171a20;
+  --surface-inverse: var(--ink);
   --text-primary: var(--ink);
   --text-secondary: var(--ink-soft);
   --text-muted: var(--ink-muted);
-  --text-inverse: #ffffff;
-  --accent: var(--ink);
-  --accent-contrast: #ffffff;
-  --focus-ring: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink);
-  --grid-line: rgba(23, 26, 32, 0.09);
+  --text-inverse: var(--paper);
+  --focus-ring: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
+  --grid-line: rgba(244, 242, 255, 0.07);
 
   /* Surface states: hover washes, sheet headers, gutters, editor fills. */
-  --chrome: rgba(244, 245, 247, 0.92);
-  --paper-hover: #eef0f3;
-  --paper-header: #e8eaee;
-  --paper-gutter: #dfe2e7;
-  --paper-gutter-soft: #eef0f3;
-  --paper-gutter-hover: #e4e7eb;
-  --paper-gutter-active: #d9dde2;
-  --paper-editor: #ffffff;
-  --paper-wash: rgba(23, 26, 32, 0.04);
-  --paper-wash-soft: rgba(23, 26, 32, 0.03);
-  --card-fill: rgba(255, 255, 255, 0.9);
-  --card-fill-strong: rgba(255, 255, 255, 0.96);
+  --chrome: rgba(10, 8, 32, 0.78);
+  --paper-hover: #1c1748;
+  --paper-header: #1a1548;
+  --paper-gutter: #0f0c2e;
+  --paper-gutter-soft: #141038;
+  --paper-gutter-hover: #1a1548;
+  --paper-gutter-active: #241d5c;
+  --paper-editor: #171243;
+  --paper-wash: rgba(244, 242, 255, 0.05);
+  --paper-wash-soft: rgba(244, 242, 255, 0.035);
+  --card-fill: rgba(20, 16, 56, 0.72);
+  --card-fill-strong: rgba(20, 16, 56, 0.94);
 
   /* Spacing and elevation scale */
   --space-1: 4px;
@@ -110,10 +135,10 @@
   --space-6: 32px;
   --space-7: 48px;
   --elev-0: none;
-  --elev-1: 0 1px 2px rgba(23, 26, 32, 0.06), 0 2px 8px rgba(23, 26, 32, 0.05);
+  --elev-1: 0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent), 0 2px 8px color-mix(in srgb, var(--ink) 5%, transparent);
   --elev-2: var(--shadow-sm);
   --elev-3: var(--shadow-md);
-  --elev-4: 0 30px 70px rgba(23, 26, 32, 0.2);
+  --elev-4: 0 30px 70px color-mix(in srgb, var(--ink) 20%, transparent);
   --hairline: 1px solid var(--line);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 120ms;
@@ -157,7 +182,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(217, 58, 71, 0.28);
+  outline: 3px solid color-mix(in srgb, var(--red) 28%, transparent);
   outline-offset: 2px;
 }
 
@@ -232,10 +257,10 @@ button:disabled {
   place-items: center;
   width: 34px;
   height: 34px;
-  color: var(--paper-bright);
-  background: var(--ink);
+  color: var(--accent-contrast);
+  background: var(--accent);
   border-radius: 50%;
-  box-shadow: 4px 4px 0 var(--ink);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--accent) 34%, transparent);
   transform: rotate(-7deg);
 }
 
@@ -289,16 +314,13 @@ button:disabled {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  opacity: 0.9;
-  mix-blend-mode: multiply;
 }
 
 .login-noise {
-  opacity: 0.10;
-  background-image: radial-gradient(rgba(23, 26, 32, 0.5) 0.6px, transparent 0.6px);
+  opacity: 0.14;
+  background-image: radial-gradient(rgba(244, 242, 255, 0.6) 0.6px, transparent 0.6px);
   background-size: 5px 5px;
-  mix-blend-mode: multiply;
+  mix-blend-mode: screen;
 }
 
 .login-grid {
@@ -318,7 +340,7 @@ button:disabled {
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--line-strong);
-  box-shadow: 24px 24px 0 rgba(217, 58, 71, 0.26), var(--shadow-md);
+  box-shadow: 24px 24px 0 color-mix(in srgb, var(--accent) 30%, transparent), var(--shadow-md);
 }
 
 .brand-lockup-large .brand-mark {
@@ -338,7 +360,7 @@ button:disabled {
 .login-rule {
   height: 1px;
   margin: 34px 0 31px;
-  background: linear-gradient(90deg, var(--line-strong), rgba(23, 26, 32, 0.03));
+  background: linear-gradient(90deg, var(--line-strong), color-mix(in srgb, var(--ink) 3%, transparent));
 }
 
 .login-heading h1 {
@@ -432,8 +454,8 @@ textarea::placeholder {
 }
 
 .button-primary {
-  color: var(--paper-bright);
-  background: var(--ink);
+  color: var(--accent-contrast);
+  background: var(--accent);
   box-shadow: 4px 4px 0 var(--ink-deep);
 }
 
@@ -460,13 +482,13 @@ textarea::placeholder {
 .button-danger {
   color: var(--red-deep);
   background: var(--red-pale);
-  border-color: rgba(180, 34, 46, 0.18);
+  border-color: color-mix(in srgb, var(--red-ink) 18%, transparent);
 }
 
 .button-success {
   color: var(--green-ink);
   background: var(--green-pale);
-  border-color: rgba(49, 155, 84, 0.22);
+  border-color: color-mix(in srgb, var(--green) 22%, transparent);
 }
 
 .button-wide {
@@ -521,9 +543,9 @@ textarea::placeholder {
   height: 560px;
   right: -200px;
   top: -210px;
-  border: 1px solid rgba(23, 26, 32, 0.18);
+  border: 1px solid rgba(244, 242, 255, 0.18);
   border-radius: 50%;
-  box-shadow: 0 0 0 40px rgba(23, 26, 32, 0.03), 0 0 0 80px rgba(23, 26, 32, 0.03), 0 0 0 120px rgba(23, 26, 32, 0.03);
+  box-shadow: 0 0 0 40px rgba(244, 242, 255, 0.035), 0 0 0 80px rgba(244, 242, 255, 0.035), 0 0 0 120px rgba(244, 242, 255, 0.035);
 }
 
 .login-aside::after {
@@ -532,7 +554,7 @@ textarea::placeholder {
   width: 70%;
   height: 38%;
   opacity: 0.18;
-  background: repeating-linear-gradient(-45deg, transparent 0 14px, rgba(23, 26, 32, 0.12) 15px 16px);
+  background: repeating-linear-gradient(-45deg, transparent 0 14px, rgba(244, 242, 255, 0.12) 15px 16px);
 }
 
 .aside-kicker {
@@ -598,7 +620,7 @@ textarea::placeholder {
   left: 0;
   height: 160px;
   opacity: 0.5;
-  background-image: linear-gradient(135deg, transparent 0 49%, rgba(23, 26, 32, 0.06) 50% 51%, transparent 52% 100%);
+  background-image: linear-gradient(135deg, transparent 0 49%, rgba(244, 242, 255, 0.07) 50% 51%, transparent 52% 100%);
   background-size: 12px 12px;
   content: '';
   pointer-events: none;
@@ -655,9 +677,9 @@ textarea::placeholder {
 }
 
 .nav-item.is-active {
-  color: var(--ink);
-  background: var(--paper-deep);
-  border-color: var(--line-strong);
+  color: var(--accent-ink);
+  background: var(--accent-pale);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
 }
 
 .nav-item.is-active::before {
@@ -666,7 +688,7 @@ textarea::placeholder {
   bottom: 9px;
   left: -17px;
   width: 3px;
-  background: var(--ink);
+  background: var(--accent);
   content: '';
 }
 
@@ -725,7 +747,7 @@ textarea::placeholder {
 
 .watcher-card-copy strong {
   overflow: hidden;
-  color: var(--paper-bright);
+  color: var(--ink);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -745,7 +767,7 @@ textarea::placeholder {
   place-items: center;
   width: 28px;
   height: 28px;
-  border: 1px solid rgba(194, 139, 10, 0.7);
+  border: 1px solid color-mix(in srgb, var(--amber) 70%, transparent);
   border-radius: 50%;
 }
 
@@ -799,12 +821,12 @@ textarea::placeholder {
 
 .status-dot-live {
   background: var(--green);
-  box-shadow: 0 0 0 3px rgba(49, 155, 84, 0.14);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 14%, transparent);
 }
 
 .status-dot-warn {
   background: var(--gold);
-  box-shadow: 0 0 0 3px rgba(194, 139, 10, 0.14);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amber) 14%, transparent);
 }
 
 .icon-button {
@@ -821,7 +843,7 @@ textarea::placeholder {
 }
 
 .icon-button:hover {
-  background: rgba(127, 127, 127, 0.12);
+  background: color-mix(in srgb, var(--ink-muted) 12%, transparent);
   border-color: var(--line);
 }
 
@@ -1016,7 +1038,7 @@ textarea::placeholder {
   position: absolute;
   inset: 0;
   opacity: 0.16;
-  background-image: radial-gradient(rgba(23, 26, 32, 0.45) 0.6px, transparent 0.7px);
+  background-image: radial-gradient(rgba(244, 242, 255, 0.5) 0.6px, transparent 0.7px);
   background-size: 6px 6px;
   content: '';
   pointer-events: none;
@@ -1028,9 +1050,9 @@ textarea::placeholder {
   bottom: -170px;
   width: 450px;
   height: 450px;
-  border: 1px solid rgba(23, 26, 32, 0.10);
+  border: 1px solid rgba(244, 242, 255, 0.10);
   border-radius: 50%;
-  box-shadow: 0 0 0 32px rgba(23, 26, 32, 0.03), 0 0 0 64px rgba(23, 26, 32, 0.03), 0 0 0 96px rgba(23, 26, 32, 0.03);
+  box-shadow: 0 0 0 32px rgba(244, 242, 255, 0.035), 0 0 0 64px rgba(244, 242, 255, 0.035), 0 0 0 96px rgba(244, 242, 255, 0.035);
   content: '';
 }
 
@@ -1072,7 +1094,7 @@ textarea::placeholder {
   display: flex;
   align-items: flex-end;
   padding: 35px 39px;
-  background: linear-gradient(140deg, rgba(217, 58, 71, 0.94), rgba(180, 34, 46, 0.75));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--red) 94%, transparent), color-mix(in srgb, var(--red-ink) 75%, transparent));
 }
 
 .hero-status-inner {
@@ -1104,7 +1126,7 @@ textarea::placeholder {
 .hero-status-bar {
   height: 5px;
   margin-top: 23px;
-  background: rgba(23, 26, 32, 0.25);
+  background: color-mix(in srgb, var(--ink) 25%, transparent);
   overflow: hidden;
 }
 
@@ -1388,17 +1410,17 @@ textarea::placeholder {
   content: '';
 }
 
-.status-chip-on-track { color: var(--green-ink); background: var(--green-pale); border-color: rgba(49, 155, 84, 0.18); }
-.status-chip-at-risk { color: var(--amber-ink); background: var(--amber-wash); border-color: rgba(128, 92, 7, 0.18); }
+.status-chip-on-track { color: var(--green-ink); background: var(--green-pale); border-color: color-mix(in srgb, var(--green) 18%, transparent); }
+.status-chip-at-risk { color: var(--amber-ink); background: var(--amber-wash); border-color: color-mix(in srgb, var(--amber-ink) 18%, transparent); }
 .status-chip-watch,
-.status-chip-new { color: var(--violet-ink); background: var(--violet-pale); border-color: rgba(166, 80, 203, 0.2); }
+.status-chip-new { color: var(--violet-ink); background: var(--violet-pale); border-color: color-mix(in srgb, var(--violet) 20%, transparent); }
 .status-chip-pending,
-.status-chip-pending-review { color: var(--gold-ink); background: var(--gold-pale); border-color: rgba(194, 139, 10, 0.28); }
-.status-chip-approved { color: var(--green-ink); background: var(--green-pale); border-color: rgba(49, 155, 84, 0.18); }
+.status-chip-pending-review { color: var(--gold-ink); background: var(--gold-pale); border-color: color-mix(in srgb, var(--amber) 28%, transparent); }
+.status-chip-approved { color: var(--green-ink); background: var(--green-pale); border-color: color-mix(in srgb, var(--green) 18%, transparent); }
 .status-chip-changes_requested,
-.status-chip-changes-requested { color: var(--red-ink); background: var(--red-pale); border-color: rgba(180, 34, 46, 0.18); }
-.status-chip-handoff { color: var(--blue-ink); background: var(--blue-pale); border-color: rgba(35, 118, 213, 0.2); }
-.status-changes { color: var(--red-ink); background: var(--red-pale); border-color: rgba(180, 34, 46, 0.2); }
+.status-chip-changes-requested { color: var(--red-ink); background: var(--red-pale); border-color: color-mix(in srgb, var(--red-ink) 18%, transparent); }
+.status-chip-handoff { color: var(--blue-ink); background: var(--blue-pale); border-color: color-mix(in srgb, var(--blue) 20%, transparent); }
+.status-changes { color: var(--red-ink); background: var(--red-pale); border-color: color-mix(in srgb, var(--red-ink) 20%, transparent); }
 
 .row-chevron {
   color: var(--ink-muted);
@@ -1516,7 +1538,7 @@ textarea::placeholder {
 .filter-tab.is-active {
   color: var(--ink);
   background: var(--paper-bright);
-  box-shadow: 0 2px 5px rgba(23, 26, 32, 0.07);
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--ink) 7%, transparent);
 }
 
 .filter-tab.is-active {
@@ -1867,11 +1889,11 @@ button.sheet-column-heading.is-active {
 .sheet-open-button:hover {
   color: var(--ink);
   background: var(--red-pale);
-  border-color: rgba(217, 58, 71, 0.18);
+  border-color: color-mix(in srgb, var(--red) 18%, transparent);
 }
 
 .sheet-log-button-danger {
-  color: rgba(217, 58, 71, 0.72);
+  color: color-mix(in srgb, var(--red) 72%, transparent);
 }
 
 .sheet-log-button-danger:hover {
@@ -1900,7 +1922,7 @@ button.sheet-column-heading.is-active {
 
 .erase-picker-row.is-pending {
   background: var(--gold-pale);
-  border-color: rgba(197, 148, 20, 0.28);
+  border-color: color-mix(in srgb, var(--amber) 28%, transparent);
 }
 
 .erase-picker-row > p {
@@ -1936,8 +1958,8 @@ button.sheet-column-heading.is-active {
 .timeline-pending-chip {
   padding: 4px 9px;
   color: var(--gold-ink);
-  background: rgba(197, 148, 20, 0.16);
-  border: 1px solid rgba(197, 148, 20, 0.3);
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
   border-radius: 999px;
   font-family: var(--mono);
   font-size: 8px;
@@ -1980,7 +2002,7 @@ button.sheet-column-heading.is-active {
   border-radius: 4px;
   outline: 0;
   font-size: 11px;
-  box-shadow: 0 0 0 2px rgba(217, 58, 71, 0.1);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 10%, transparent);
 }
 
 select.account-sheet-editor {
@@ -2317,13 +2339,13 @@ select.account-sheet-editor {
 .team-card--lead {
   color: var(--ink);
   background: var(--violet-pale);
-  border-color: rgba(166, 80, 203, 0.42);
+  border-color: color-mix(in srgb, var(--violet) 42%, transparent);
 }
 
 .team-card--reviewer {
   color: var(--ink);
   background: var(--gold-pale);
-  border-color: rgba(194, 139, 10, 0.45);
+  border-color: color-mix(in srgb, var(--amber) 45%, transparent);
 }
 
 .team-card--contributor {
@@ -2656,7 +2678,7 @@ select.account-sheet-editor {
   display: grid;
   place-items: center;
   padding: 22px;
-  background: rgba(23, 26, 32, 0.68);
+  background: color-mix(in srgb, var(--ink) 68%, transparent);
   backdrop-filter: blur(5px);
 }
 
@@ -2830,7 +2852,7 @@ select.account-sheet-editor {
   min-height: 142px;
   margin-bottom: 16px;
   padding: 25px 30px;
-  color: var(--paper-bright);
+  color: var(--ink);
   background: linear-gradient(118deg, var(--paper-bright) 0%, var(--violet-pale) 58%, var(--blue-pale) 100%);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
@@ -2842,7 +2864,7 @@ select.account-sheet-editor {
   position: absolute;
   inset: 0;
   opacity: 0.16;
-  background-image: linear-gradient(135deg, transparent 0 47%, rgba(194, 139, 10, 0.34) 48% 49%, transparent 50% 100%);
+  background-image: linear-gradient(135deg, transparent 0 47%, color-mix(in srgb, var(--amber) 34%, transparent) 48% 49%, transparent 50% 100%);
   background-size: 28px 28px;
   content: '';
   pointer-events: none;
@@ -2876,9 +2898,9 @@ select.account-sheet-editor {
   width: 86px;
   height: 86px;
   flex: 0 0 auto;
-  border: 1px solid rgba(194, 139, 10, 0.6);
+  border: 1px solid color-mix(in srgb, var(--amber) 60%, transparent);
   border-radius: 50%;
-  box-shadow: 0 0 0 10px rgba(194, 139, 10, 0.05), 0 0 0 20px rgba(194, 139, 10, 0.035);
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--amber) 5%, transparent), 0 0 0 20px color-mix(in srgb, var(--amber) 4%, transparent);
 }
 
 .tva-sacred-mark::before,
@@ -2893,7 +2915,7 @@ select.account-sheet-editor {
 
 .tva-sacred-mark::before { top: -4px; left: 38px; }
 .tva-sacred-mark::after { right: 3px; bottom: 18px; }
-.tva-sacred-mark span { color: var(--paper-bright); font-family: var(--display); font-size: 28px; font-weight: 800; }
+.tva-sacred-mark span { color: var(--accent-ink); font-family: var(--display); font-size: 28px; font-weight: 800; }
 .tva-sacred-mark i { position: absolute; width: 12px; height: 12px; border: 1px solid var(--gold); border-radius: 50%; }
 
 .tva-command-bar {
@@ -2911,7 +2933,7 @@ select.account-sheet-editor {
   display: flex;
   gap: 3px;
   padding: 3px;
-  background: rgba(23, 26, 32, 0.06);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
   border-radius: 8px;
 }
 
@@ -2929,7 +2951,7 @@ select.account-sheet-editor {
 .tva-scope-toggle button.is-active {
   color: var(--paper-bright);
   background: var(--ink);
-  box-shadow: 0 3px 8px rgba(23, 26, 32, 0.18);
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--ink) 18%, transparent);
 }
 
 .tva-account-select,
@@ -3078,7 +3100,7 @@ select.account-sheet-editor {
 .legend-roadblock { background: var(--red); }
 .legend-resolution {
   background: var(--green);
-  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px rgba(49, 155, 84, 0.45);
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px color-mix(in srgb, var(--green) 45%, transparent);
 }
 
 .tva-map-scroll {
@@ -3223,7 +3245,7 @@ select.account-sheet-editor {
 }
 
 .tva-flow-gridline {
-  stroke: rgba(23, 26, 32, 0.09);
+  stroke: color-mix(in srgb, var(--ink) 9%, transparent);
   stroke-dasharray: 2 7;
   stroke-width: 1;
 }
@@ -3256,11 +3278,11 @@ select.account-sheet-editor {
   stroke-width: 1;
 }
 
-.tva-stream-group.tva-group-red .tva-group-background { fill: rgba(250, 237, 238, 0.2); stroke: rgba(217, 58, 71, 0.24); }
-.tva-stream-group.tva-group-blue .tva-group-background { fill: rgba(237, 243, 250, 0.34); stroke: rgba(35, 118, 213, 0.28); }
-.tva-stream-group.tva-group-violet .tva-group-background { fill: rgba(246, 238, 249, 0.34); stroke: rgba(166, 80, 203, 0.28); }
-.tva-stream-group.tva-group-gold .tva-group-background { fill: rgba(250, 246, 237, 0.32); stroke: rgba(194, 139, 10, 0.3); }
-.tva-stream-group.tva-group-green .tva-group-background { fill: rgba(238, 249, 242, 0.34); stroke: rgba(49, 155, 84, 0.28); }
+.tva-stream-group.tva-group-red .tva-group-background { fill: rgba(250, 237, 238, 0.2); stroke: color-mix(in srgb, var(--red) 24%, transparent); }
+.tva-stream-group.tva-group-blue .tva-group-background { fill: rgba(237, 243, 250, 0.34); stroke: color-mix(in srgb, var(--blue) 28%, transparent); }
+.tva-stream-group.tva-group-violet .tva-group-background { fill: rgba(246, 238, 249, 0.34); stroke: color-mix(in srgb, var(--violet) 28%, transparent); }
+.tva-stream-group.tva-group-gold .tva-group-background { fill: rgba(250, 246, 237, 0.32); stroke: color-mix(in srgb, var(--amber) 30%, transparent); }
+.tva-stream-group.tva-group-green .tva-group-background { fill: rgba(238, 249, 242, 0.34); stroke: color-mix(in srgb, var(--green) 28%, transparent); }
 
 .tva-group-title {
   fill: var(--ink);
@@ -3294,7 +3316,7 @@ select.account-sheet-editor {
   stroke: var(--red);
   stroke-linecap: round;
   stroke-width: 2.5;
-  filter: drop-shadow(0 3px 2px rgba(23, 26, 32, 0.12));
+  filter: drop-shadow(0 3px 2px color-mix(in srgb, var(--ink) 12%, transparent));
 }
 
 .tva-group-junction {
@@ -3307,7 +3329,7 @@ select.account-sheet-editor {
 
 .tva-stream-row-bg {
   fill: var(--card-fill);
-  stroke: rgba(23, 26, 32, 0.08);
+  stroke: color-mix(in srgb, var(--ink) 8%, transparent);
   stroke-width: 1;
 }
 
@@ -3343,7 +3365,7 @@ select.account-sheet-editor {
   stroke-linecap: round;
   stroke-width: 3;
   opacity: 0.9;
-  filter: drop-shadow(0 2px 2px rgba(23, 26, 32, 0.1));
+  filter: drop-shadow(0 2px 2px color-mix(in srgb, var(--ink) 10%, transparent));
 }
 
 .tva-stream-blue .tva-stream-path { stroke: var(--blue); }
@@ -3373,11 +3395,11 @@ select.account-sheet-editor {
 
 .tva-branch-label-bg {
   fill: var(--card-fill-strong);
-  stroke: rgba(217, 58, 71, 0.4);
+  stroke: color-mix(in srgb, var(--red) 40%, transparent);
   stroke-width: 1;
 }
 
-.tva-branch.is-resolved .tva-branch-label-bg { stroke: rgba(49, 155, 84, 0.44); }
+.tva-branch.is-resolved .tva-branch-label-bg { stroke: color-mix(in srgb, var(--green) 44%, transparent); }
 
 .tva-branch-label {
   fill: var(--red-deep);
@@ -3432,7 +3454,7 @@ select.account-sheet-editor {
 .tva-node-spark { fill: var(--paper-bright); pointer-events: none; }
 
 .tva-master-flow { cursor: default; }
-.tva-master-background { fill: var(--ink-soft); stroke: rgba(194, 139, 10, 0.52); stroke-width: 1.5; filter: drop-shadow(0 8px 8px rgba(23, 26, 32, 0.12)); }
+.tva-master-background { fill: var(--ink-soft); stroke: color-mix(in srgb, var(--amber) 52%, transparent); stroke-width: 1.5; filter: drop-shadow(0 8px 8px color-mix(in srgb, var(--ink) 12%, transparent)); }
 .tva-master-kicker { fill: var(--gold); font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; }
 .tva-master-status { fill: var(--paper-bright); font-family: var(--display); font-size: 15px; font-weight: 800; letter-spacing: -0.03em; }
 .tva-master-status.has-warning { fill: var(--red-ink); }
@@ -3461,8 +3483,8 @@ select.account-sheet-editor {
 }
 
 .tva-master-group-card:hover { border-color: var(--ink); transform: translateY(-1px); }
-.tva-master-group-card.is-blocked { background: linear-gradient(135deg, var(--paper-bright), var(--red-pale)); border-color: rgba(217, 58, 71, 0.26); }
-.tva-master-group-card.is-flowing { background: linear-gradient(135deg, var(--paper-bright), var(--green-pale)); border-color: rgba(49, 155, 84, 0.24); }
+.tva-master-group-card.is-blocked { background: linear-gradient(135deg, var(--paper-bright), var(--red-pale)); border-color: color-mix(in srgb, var(--red) 26%, transparent); }
+.tva-master-group-card.is-flowing { background: linear-gradient(135deg, var(--paper-bright), var(--green-pale)); border-color: color-mix(in srgb, var(--green) 24%, transparent); }
 
 .tva-master-group-top {
   display: flex;
@@ -3498,8 +3520,8 @@ select.account-sheet-editor {
   align-items: start;
 }
 
-.tva-account-card.blocked { background: linear-gradient(135deg, var(--paper), var(--red-pale)); border-color: rgba(217, 58, 71, 0.24); }
-.tva-account-card.rejoined { background: linear-gradient(135deg, var(--paper), var(--green-pale)); border-color: rgba(49, 155, 84, 0.24); }
+.tva-account-card.blocked { background: linear-gradient(135deg, var(--paper), var(--red-pale)); border-color: color-mix(in srgb, var(--red) 24%, transparent); }
+.tva-account-card.rejoined { background: linear-gradient(135deg, var(--paper), var(--green-pale)); border-color: color-mix(in srgb, var(--green) 24%, transparent); }
 .tva-stream-status { margin-left: auto; padding: 4px 6px; border-radius: 5px; font-family: var(--mono); font-size: 8px; letter-spacing: 0.04em; text-transform: uppercase; }
 .tva-stream-status.flowing { color: var(--green-ink); background: var(--green-pale); }
 .tva-stream-status.blocked { color: var(--red-deep); background: var(--red-pale); }
@@ -3525,8 +3547,8 @@ select.account-sheet-editor {
 }
 
 .tva-branch-card:hover { border-color: var(--ink); transform: translateY(-1px); }
-.tva-branch-card.is-open { background: linear-gradient(135deg, var(--paper-bright), var(--red-pale)); border-color: rgba(217, 58, 71, 0.24); }
-.tva-branch-card.is-resolved { background: linear-gradient(135deg, var(--paper-bright), var(--green-pale)); border-color: rgba(49, 155, 84, 0.24); }
+.tva-branch-card.is-open { background: linear-gradient(135deg, var(--paper-bright), var(--red-pale)); border-color: color-mix(in srgb, var(--red) 24%, transparent); }
+.tva-branch-card.is-resolved { background: linear-gradient(135deg, var(--paper-bright), var(--green-pale)); border-color: color-mix(in srgb, var(--green) 24%, transparent); }
 .tva-branch-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tva-branch-card > strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .tva-branch-card > p { min-height: 32px; margin: 0; color: var(--ink-muted); font-size: 10px; line-height: 1.45; }
@@ -3608,7 +3630,7 @@ select.account-sheet-editor {
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--line-strong);
-  box-shadow: 24px 24px 0 rgba(217, 58, 71, 0.26), var(--shadow-md);
+  box-shadow: 24px 24px 0 color-mix(in srgb, var(--accent) 30%, transparent), var(--shadow-md);
 }
 
   .app-shell {
@@ -3641,7 +3663,7 @@ select.account-sheet-editor {
     inset: 0;
     z-index: 15;
     display: block;
-    background: rgba(23, 26, 32, 0.45);
+    background: color-mix(in srgb, var(--ink) 45%, transparent);
   }
 
   .topbar {
@@ -3883,7 +3905,7 @@ select.account-sheet-editor {
 
 .button-ghost-danger {
   color: var(--red-deep);
-  border-color: rgba(217, 58, 71, 0.32);
+  border-color: color-mix(in srgb, var(--red) 32%, transparent);
   background: rgba(250, 237, 238, 0.32);
 }
 
@@ -3916,13 +3938,13 @@ select.account-sheet-editor {
 
 .timeline-event.is-erasing {
   background: repeating-linear-gradient(135deg, var(--red-pale) 0 10px, var(--card-fill) 10px 20px);
-  border-color: rgba(217, 58, 71, 0.34);
+  border-color: color-mix(in srgb, var(--red) 34%, transparent);
   opacity: 0.92;
 }
 
 .timeline-event.is-erasing .timeline-event-body {
   text-decoration: line-through;
-  text-decoration-color: rgba(217, 58, 71, 0.5);
+  text-decoration-color: color-mix(in srgb, var(--red) 50%, transparent);
   color: var(--ink-muted);
 }
 
@@ -3933,7 +3955,7 @@ select.account-sheet-editor {
   gap: 10px;
   margin-top: 12px;
   padding: 11px 12px;
-  border: 1px solid rgba(217, 58, 71, 0.28);
+  border: 1px solid color-mix(in srgb, var(--red) 28%, transparent);
   border-radius: 10px;
   background: rgba(250, 237, 238, 0.5);
   color: var(--red-deep);
@@ -3955,7 +3977,7 @@ select.account-sheet-editor {
 .timeline-erase-actions .button { padding: 5px 9px; font-size: 9px; }
 
 .erase-request-card {
-  border-color: rgba(217, 58, 71, 0.28);
+  border-color: color-mix(in srgb, var(--red) 28%, transparent);
   background: linear-gradient(135deg, var(--paper-bright), var(--red-pale));
 }
 
@@ -3963,7 +3985,7 @@ select.account-sheet-editor {
   display: grid;
   place-items: center;
   color: var(--red-deep);
-  background: rgba(217, 58, 71, 0.14);
+  background: color-mix(in srgb, var(--red) 14%, transparent);
 }
 
 .erase-reason {
@@ -3974,7 +3996,7 @@ select.account-sheet-editor {
   padding: 9px 11px;
   border-left: 3px solid var(--red);
   border-radius: 0 8px 8px 0;
-  background: rgba(217, 58, 71, 0.07);
+  background: color-mix(in srgb, var(--red) 7%, transparent);
   color: var(--ink);
   font-size: 11px;
   line-height: 1.5;
@@ -3996,7 +4018,7 @@ select.account-sheet-editor {
 }
 
 .correction-scope > [data-icon] { color: var(--gold); }
-.correction-target { border-color: rgba(35, 118, 213, 0.34); background: var(--blue-pale); }
+.correction-target { border-color: color-mix(in srgb, var(--blue) 34%, transparent); background: var(--blue-pale); }
 .correction-target > [data-icon] { color: var(--blue); }
 .correction-scope > div,
 .correction-target > div { display: grid; min-width: 0; gap: 3px; }
@@ -4076,8 +4098,8 @@ select.account-sheet-editor {
 
 body {
   background-image:
-    radial-gradient(1100px 620px at 8% -8%, color-mix(in srgb, var(--ink) 5%, transparent), transparent 62%),
-    radial-gradient(900px 520px at 104% 4%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 58%),
+    radial-gradient(1100px 620px at 8% -8%, color-mix(in srgb, var(--violet) 17%, transparent), transparent 62%),
+    radial-gradient(900px 520px at 104% 4%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 58%),
     linear-gradient(180deg, var(--paper), var(--paper-deep));
   background-attachment: fixed;
   letter-spacing: 0.002em;
@@ -4117,12 +4139,12 @@ body {
 }
 
 .button-primary {
-  background: var(--ink);
+  background: var(--accent);
   box-shadow: 0 8px 20px color-mix(in srgb, var(--ink) 24%, transparent);
 }
 
 .button-primary:hover {
-  background: #0b0d11;
+  background: var(--accent-ink);
   box-shadow: 0 12px 28px color-mix(in srgb, var(--ink) 32%, transparent);
 }
 
@@ -4544,8 +4566,8 @@ body {
   padding: 11px 16px;
   border-radius: 99px;
   border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  background: linear-gradient(135deg, var(--ink), var(--violet));
-  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--violet));
+  color: var(--paper);
   font-family: var(--display);
   font-size: 12.5px;
   letter-spacing: 0.04em;
@@ -4582,14 +4604,14 @@ body {
   .guide-launcher {
     right: 14px;
     bottom: 14px;
-  background: linear-gradient(135deg, var(--ink), var(--violet));
+  background: linear-gradient(135deg, var(--accent), var(--violet));
 }
   .guide-launcher-label {
     display: none;
   }
   .guide-launcher {
     padding: 12px;
-  background: linear-gradient(135deg, var(--ink), var(--violet));
+  background: linear-gradient(135deg, var(--accent), var(--violet));
 }
 }
 /* ============================================================================

@@ -1662,34 +1662,6 @@ async function submitCorrection(form) {
   }
 }
 
-const THEME_KEY = 'watcher-theme';
-
-function currentTheme() {
-  try { return localStorage.getItem(THEME_KEY) || ''; } catch { return ''; }
-}
-
-function applyTheme(theme) {
-  const root = document.documentElement;
-  if (theme) root.setAttribute('data-theme', theme);
-  else root.removeAttribute('data-theme');
-  const resolved = theme || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  root.style.colorScheme = resolved;
-  $$('[data-theme-toggle]').forEach((button) => {
-    button.innerHTML = resolved === 'dark' ? icons.sun : icons.moon;
-    button.setAttribute('aria-pressed', resolved === 'dark' ? 'true' : 'false');
-    button.setAttribute('aria-label', resolved === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme');
-  });
-}
-
-function toggleTheme() {
-  const root = document.documentElement;
-  const active = root.getAttribute('data-theme')
-    || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  const next = active === 'dark' ? 'light' : 'dark';
-  try { localStorage.setItem(THEME_KEY, next); } catch { /* storage is optional */ }
-  applyTheme(next);
-}
-
 function guideFaq() {
   return window.WatcherFaq || null;
 }
@@ -1809,7 +1781,6 @@ async function copyResetCode(resetId) {
 function handleAction(actionElement) {
   const action = actionElement.dataset.action;
   if (action === 'close-modal') return closeModal();
-  if (action === 'toggle-theme') return toggleTheme();
   if (action === 'open-reset-request') return openPasswordResetModal();
   if (action === 'copy-reset-code') return copyResetCode(actionElement.dataset.resetId);
   if (action === 'open-guide') return openGuide();
@@ -2029,8 +2000,7 @@ function bindEvents() {
 async function boot() {
   bindEvents();
   hydrateIcons();
-  applyTheme(currentTheme());
-  try {
+    try {
     const payload = await api('/api/me');
     await enterApp(payload.user);
   } catch {

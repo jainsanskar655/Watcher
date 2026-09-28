@@ -10,6 +10,7 @@ const state = {
   accountEdit: null,
   search: '',
   searchTimer: null,
+  guide: { log: [] },
   modal: null,
   timeline: [],
   timelineScope: 'account',
@@ -34,8 +35,11 @@ const icons = {
   'log-out': '<svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg>',
   'menu': '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   'plus': '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  'minimise': '<svg viewBox="0 0 24 24"><path d="M6 15h12"/></svg>',
+  'moon': '<svg viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>',
   'refresh': '<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.7-3L4 10"/><path d="M4 5v5h5M4 13a8 8 0 0 0 14.7 3L20 14"/><path d="M20 19v-5h-5"/></svg>',
   'search': '<svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>',
+  'sun': '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>',
   'send': '<svg viewBox="0 0 24 24"><path d="m21 3-7.2 18-3.4-7.4L3 10.2 21 3Z"/><path d="M10.4 13.6 21 3"/></svg>',
   'shield': '<svg viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.5-3 8.1-7 10-4-1.9-7-5.5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>',
   'spark': '<svg viewBox="0 0 24 24"><path d="m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3ZM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></svg>',
@@ -883,6 +887,10 @@ function timelineTruncate(value, length = 28) {
 }
 
 const TVA_PLOT = { left: 330, right: 1440 };
+// The trunk must terminate exactly where the convergence bundle begins, otherwise a
+// visible gap opens up between the account line and the owner bundle.
+const TVA_TRUNK_END = TVA_PLOT.right;
+const TVA_BUNDLE_START = TVA_TRUNK_END;
 const TVA_TRUNK_OFFSET = 34;
 const TVA_ROW_BASE = 76;
 const TVA_LANE_START = 26;
@@ -969,16 +977,18 @@ function timelineStreamMarkup(stream, config) {
   const variant = ['red', 'blue', 'violet', 'gold', 'green'][streamIndex % 5];
   const branches = timelineBranchModels(stream);
   const openBranches = branches.filter((branch) => branch.open);
-  const railEnd = TVA_PLOT.right - 18;
+  const railEnd = TVA_TRUNK_END;
   const trunk = timelineTrunkPath(y, TVA_PLOT.left, railEnd);
+  const capX = Math.min(nowX, TVA_PLOT.right - 4);
   const branchMarkup = branches.map((branch, branchIndex) => {
     const issueX = Math.max(TVA_PLOT.left, positions.get(branch.issue.id) ?? TVA_PLOT.left);
     const hasResolution = Boolean(branch.resolution);
     const resolutionX = hasResolution ? Math.max(issueX + TVA_NODE_GAP + 8, positions.get(branch.resolution.id) ?? issueX) : null;
     const laneY = y + timelineLaneOffset(branchIndex);
+    const openEndX = Math.max(issueX + 40, capX);
     const path = hasResolution
       ? timelineBranchPath(issueX, resolutionX, y, laneY)
-      : timelineOpenBranchPath(issueX, Math.max(issueX + 40, nowX), y, laneY);
+      : timelineOpenBranchPath(issueX, openEndX, y, laneY);
     const label = `${typeLabel(branch.issue.type)} · ${hasResolution ? 'rejoined' : 'open'}`;
     const labelX = Math.max(issueX + 14, Math.min(issueX + 46, TVA_PLOT.right - 176));
     const labelWidth = Math.max(96, Math.min(168, (resolutionX || nowX) - labelX - 14));
@@ -993,7 +1003,7 @@ function timelineStreamMarkup(stream, config) {
       .join('');
     const cap = hasResolution
       ? `<g class="tva-rejoin-node" data-action="open-account" data-account-id="${branch.resolution.accountId}" tabindex="0" role="button" aria-label="Resolution and rejoin"><title>Rejoined · ${escapeHtml(timelineTruncate(branch.resolution.body, 90))}</title><circle class="tva-rejoin-halo" cx="${resolutionX}" cy="${y}" r="11"></circle><circle class="tva-rejoin-core" cx="${resolutionX}" cy="${y}" r="6.5"></circle></g>`
-      : `<g class="tva-open-branch-end"><line x1="${nowX}" y1="${laneY - 13}" x2="${nowX}" y2="${laneY + 5}"></line><text x="${nowX + 7}" y="${laneY + 4}">OPEN</text></g>`;
+      : `<g class="tva-open-branch-end"><line x1="${openEndX}" y1="${laneY - 13}" x2="${openEndX}" y2="${laneY + 5}"></line><text x="${openEndX + 7}" y="${laneY + 4}">OPEN</text></g>`;
     return `<g class="tva-branch ${hasResolution ? 'is-resolved' : 'is-open'}"><path class="tva-branch-path" d="${path}"></path><rect class="tva-branch-label-bg" x="${labelX}" y="${laneY - 11}" width="${labelWidth}" height="22" rx="11"></rect><text class="tva-branch-label" x="${labelX + 10}" y="${laneY + 4}">${escapeHtml(timelineTruncate(label, 24))}</text>${related}${cap}</g>`;
   }).join('');
   const nodeMarkup = stream.events
@@ -1039,7 +1049,7 @@ function timelineMap(events, accounts, groups) {
   const width = 1980;
   const groupHeader = 52;
   const groupGap = 22;
-  const convergenceX = TVA_PLOT.right + 40;
+  const convergenceX = TVA_BUNDLE_START + 40;
   const junctionX = convergenceX + 74;
   const masterStart = junctionX + 78;
   const masterEnd = width - 42;
@@ -1095,7 +1105,7 @@ function timelineMap(events, accounts, groups) {
     const bundleMarkup = layout.streams
       .map((stream, index) => {
         const y = layout.streamLayouts[index].trunkY;
-        return `<path class="tva-group-bundle" d="M ${TVA_PLOT.right + 4} ${y} C ${convergenceX} ${y}, ${junctionX - 40} ${junctionY}, ${junctionX} ${junctionY}"></path>`;
+        return `<path class="tva-group-bundle" d="M ${TVA_BUNDLE_START} ${y} C ${convergenceX} ${y}, ${junctionX - 40} ${junctionY}, ${junctionX} ${junctionY}"></path>`;
       })
       .join('');
     const status = openBranches ? `${openBranches} open branch${openBranches === 1 ? '' : 'es'}` : resolvedBranches ? `${resolvedBranches} rejoined` : 'flowing';
@@ -1569,9 +1579,146 @@ async function submitCorrection(form) {
   }
 }
 
+const THEME_KEY = 'watcher-theme';
+
+function currentTheme() {
+  try { return localStorage.getItem(THEME_KEY) || ''; } catch { return ''; }
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme) root.setAttribute('data-theme', theme);
+  else root.removeAttribute('data-theme');
+  const resolved = theme || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  root.style.colorScheme = resolved;
+  $$('[data-theme-toggle]').forEach((button) => {
+    button.innerHTML = resolved === 'dark' ? icons.sun : icons.moon;
+    button.setAttribute('aria-pressed', resolved === 'dark' ? 'true' : 'false');
+    button.setAttribute('aria-label', resolved === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme');
+  });
+}
+
+function toggleTheme() {
+  const root = document.documentElement;
+  const active = root.getAttribute('data-theme')
+    || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = active === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem(THEME_KEY, next); } catch { /* storage is optional */ }
+  applyTheme(next);
+}
+
+function guideFaq() {
+  return window.WatcherFaq || null;
+}
+
+function guideGreeting() {
+  return {
+    role: 'guide',
+    title: 'Ask me how the Watcher works',
+    body: 'I answer from a fixed knowledge base written for this team, so I can walk you through the exact steps for any task. Try a question, or pick a topic below.',
+    steps: [],
+    related: ['posting-update', 'review-flow', 'erase-request', 'corrections', 'tva-basics'].map((id) => guideFaq()?.byId(id)).filter(Boolean)
+  };
+}
+
+function guideMessage(markup) {
+  return `<article class="guide-message is-guide">`
+    + `<span class="guide-avatar">${icons.spark}</span>`
+    + `<div class="guide-bubble">${markup}</div>`
+    + `</article>`;
+}
+
+function guideRenderEntry(entry, route) {
+  const steps = (entry.steps || []).map((step, index) => `<li class="guide-step"><span class="guide-step-index">${index + 1}</span><span>${escapeHtml(step)}</span></li>`).join('');
+  const related = guideRelatedChips(entry);
+  return guideMessage(
+    `<h4 class="guide-message-title">${escapeHtml(entry.title)}</h4>`
+    + `<p class="guide-message-body">${escapeHtml(entry.answer || '')}</p>`
+    + (steps ? `<ol class="guide-steps">${steps}</ol>` : '')
+    + (route ? `<button class="guide-open-route" type="button" data-guide-route="${escapeHtml(route)}">Open that screen</button>` : '')
+    + (related ? `<div class="guide-related">${related}</div>` : '')
+  );
+}
+
+function guideRelatedChips(entry) {
+  const faq = guideFaq();
+  if (!faq) return '';
+  const ids = (entry.related || []).concat(['no-answer']);
+  return faq.relatedTo(entry).concat([faq.byId('no-answer')]).filter(Boolean)
+    .filter((item, index, list) => list.findIndex((other) => other.id === item.id) === index)
+    .map((item) => `<button class="guide-chip" type="button" data-guide-topic="${escapeHtml(item.title)}">${escapeHtml(item.title)}</button>`)
+    .join('');
+}
+
+function guideRender() {
+  const log = $('#guide-log');
+  if (!log) return;
+  log.innerHTML = state.guide.log.map((message) => {
+    if (message.role === 'user') {
+      return `<article class="guide-message is-user"><div class="guide-bubble"><p class="guide-message-body">${escapeHtml(message.text)}</p></div></article>`;
+    }
+    return guideRenderEntry(message, message.route);
+  }).join('');
+  log.scrollTop = log.scrollHeight;
+  const faq = guideFaq();
+  const chips = $('#guide-chips');
+  if (chips && faq) {
+    chips.innerHTML = faq.topics().slice(0, 6)
+      .map((topic) => `<button class="guide-chip" type="button" data-guide-topic="${escapeHtml(topic.title)}">${escapeHtml(topic.title)}</button>`)
+      .join('');
+  }
+}
+
+function guideAsk(rawQuestion) {
+  const question = String(rawQuestion || '').trim();
+  if (!question) return;
+  const faq = guideFaq();
+  state.guide.log.push({ role: 'user', text: question });
+  if (!faq) {
+    state.guide.log.push({ role: 'guide', title: 'Guide unavailable', body: 'The knowledge base did not load, so I cannot answer right now.', steps: [], related: [] });
+    return guideRender();
+  }
+  // Asking a chip re-uses its title, which scores as an exact phrase match.
+  const result = faq.match(question);
+  const entry = result.entry;
+  const route = faq.routeFromQuery(question);
+  state.guide.log.push({ role: 'guide', title: entry.title, answer: entry.answer, steps: entry.steps, related: entry.related, route });
+  if (result.confidence > 0 && result.confidence < 0.45 && result.alternatives.length) {
+    const nearest = result.alternatives[0];
+    state.guide.log[state.guide.log.length - 1].related = [nearest.id].concat(entry.related || []);
+  }
+  return guideRender();
+}
+
+function openGuide() {
+  const guide = $('#guide');
+  if (!guide) return;
+  if (!state.guide.log.length) state.guide.log.push(guideGreeting());
+  guide.classList.remove('is-hidden');
+  $('#guide-launcher')?.classList.add('is-dismissed');
+  $('#guide-launcher')?.setAttribute('aria-expanded', 'true');
+  guideRender();
+  $('#guide-input')?.focus();
+}
+
+function closeGuide() {
+  $('#guide')?.classList.add('is-hidden');
+  const launcher = $('#guide-launcher');
+  launcher?.classList.remove('is-dismissed');
+  launcher?.setAttribute('aria-expanded', 'false');
+}
+
+function minimiseGuide() {
+  closeGuide();
+}
+
 function handleAction(actionElement) {
   const action = actionElement.dataset.action;
   if (action === 'close-modal') return closeModal();
+  if (action === 'toggle-theme') return toggleTheme();
+  if (action === 'open-guide') return openGuide();
+  if (action === 'close-guide') return closeGuide();
+  if (action === 'minimise-guide') return minimiseGuide();
   if (action === 'refresh') return loadDashboard().then(() => { renderPage(); showToast('Data refreshed', 'The Watcher HQ is in sync with the local database.'); }).catch((error) => showToast('Refresh failed', error.message, true));
   if (action === 'new-account') return openAccountModal();
   if (action === 'new-update') return openUpdateModal(actionElement.dataset.accountId);
@@ -1612,6 +1759,17 @@ function openSidebar() {
 
 function handleClick(event) {
   if (event.target.closest('[data-modal-close="true"]') && !event.target.closest('.modal')) return closeModal();
+  const topicElement = event.target.closest('[data-guide-topic]');
+  if (topicElement) {
+    event.preventDefault();
+    return guideAsk(topicElement.dataset.guideTopic);
+  }
+  const routeActionElement = event.target.closest('[data-guide-route]');
+  if (routeActionElement) {
+    event.preventDefault();
+    closeGuide();
+    return navigate(routeActionElement.dataset.guideRoute);
+  }
   const scopeElement = event.target.closest('[data-timeline-scope]');
   if (scopeElement) {
     state.timelineAccount = 'all';
@@ -1741,6 +1899,12 @@ function handleSubmit(event) {
   if (!(form instanceof HTMLFormElement)) return;
   event.preventDefault();
   if (form.id === 'login-form') return submitLogin(form);
+  if (form.id === 'guide-form') {
+    const field = form.elements.question;
+    const question = field ? field.value : '';
+    if (field) field.value = '';
+    return guideAsk(question);
+  }
   if (form.id === 'account-form') return submitAccount(form);
   if (form.id === 'update-form') return submitUpdate(form);
   if (form.id === 'review-form') return submitReview(form);
@@ -1767,6 +1931,7 @@ function bindEvents() {
 async function boot() {
   bindEvents();
   hydrateIcons();
+  applyTheme(currentTheme());
   try {
     const payload = await api('/api/me');
     await enterApp(payload.user);

@@ -11,6 +11,7 @@ const state = {
   search: '',
   searchTimer: null,
   guide: { log: [] },
+  passwordResets: [],
   modal: null,
   timeline: [],
   timelineScope: 'account',
@@ -295,7 +296,8 @@ function navigate(route) {
     renderLoading();
     return;
   }
-  renderPage();
+  if (route === 'team') loadPendingResets().then(renderTeam);
+  return renderPage();
 }
 
 async function openAccount(accountId) {
@@ -780,8 +782,27 @@ function renderTeam() {
   $('#page-content').innerHTML = `
     <div class="page-header"><div class="page-header-copy"><span class="eyebrow">The roster · ${team.length} operators</span><h1>Team roster.</h1><p>Clear ownership keeps the account timeline calm: the field moves, the review gate protects, and the Watcher sees everything.</p></div></div>
     <div class="team-grid">${team.map(teamCard).join('')}</div>
+    ${passwordResetPanel()}
     <section class="panel" style="margin-top:18px"><div class="panel-header"><div><span class="eyebrow">Operating hierarchy</span><h2 class="panel-title">The Watcher model.</h2><p class="panel-subtitle">A lightweight process that keeps autonomy and accountability in the same room.</p></div></div><div class="detail-panel"><div class="detail-list"><div class="detail-list-row"><span>Samriddhi + Renuja</span><strong>Handle assigned accounts and submit updates for review</strong></div><div class="detail-list-row"><span>Apeksha</span><strong>Reviews field updates and keeps the senior quality bar</strong></div><div class="detail-list-row"><span>Sanskar</span><strong>Watches the full presales portfolio and owns final visibility</strong></div></div></div></section>`;
   hydrateIcons($('#page-content'));
+}
+
+function passwordResetPanel() {
+  if (state.user?.role !== 'lead') return '';
+  const resets = state.passwordResets || [];
+  const rows = resets.length
+    ? resets.map((reset) => `<div class="reset-row">
+        <div class="reset-identity"><strong>${escapeHtml(reset.name)}</strong><span>${escapeHtml(reset.email)}</span></div>
+        <div class="reset-delivery"><span class="reset-channel ${reset.delivery === 'email' ? 'is-email' : 'is-handover'}">${reset.delivery === 'email' ? 'emailed' : 'handover'}</span></div>
+        <div class="reset-code">${reset.code
+          ? `<code>${escapeHtml(reset.code)}</code><button class="button button-ghost button-small" type="button" data-action="copy-reset-code" data-reset-id="${reset.id}">Copy</button>`
+          : '<span class="reset-pending">check their inbox</span>'}</div>
+        <div class="reset-expiry">expires ${new Date(reset.expiresAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+      </div>`).join('')
+    : '<p class="reset-empty">No one is waiting on a passcode reset right now.</p>';
+  return `<section class="panel reset-panel"><div class="panel-header"><div><span class="eyebrow">Lead only</span><h2 class="panel-title">Passcode resets.</h2>`
+    + `<p class="panel-subtitle">${resets.length ? 'Hand the code over privately. It works once and then expires.' : 'Requests appear here the moment someone asks for one.'}</p></div>`
+    + `<button class="button button-ghost" type="button" data-action="refresh">Refresh</button></div>${rows}</section>`;
 }
 
 function teamCard(member) {
@@ -1292,8 +1313,70 @@ function modalHeader(kicker, title) {
   return `<div class="modal-header"><div><span class="eyebrow">${escapeHtml(kicker)}</span><h2>${escapeHtml(title)}</h2></div><button class="icon-button" type="button" data-action="close-modal" aria-label="Close dialog">${icon('x')}</button></div>`;
 }
 
-function openAccountModal() {
-  const isLead = state.user?.role === 'lead';
+function openPasswordResetModal() {
+  openModal(`${modalHeader('Passcode reset', 'Reset with your work email')}<div class="modal-body"><form id="password-reset-form" class="modal-form">`
+    + `<label class="form-field"><span>Your work email</span><input name="email" type="email" required autocomplete="email" placeholder="you@anakage.com"></label>`
+    + `<p class="form-help">We match the address against the team roster. If it is on file you get a reset code, and if it is not you get the same reply either way.</p>`
+    + `<div class="form-actions"><button class="button button-ghost" type="button" data-action="close-modal">Cancel</button>`
+    + `<button class="button button-primary" type="submit">${icon('send')} Send my code</button></div></form></div>`);
+}
+
+function openPasswordResetConfirmModal(email) {
+  openModal(`${modalHeader('Passcode reset', 'Enter your code')}<div class="modal-body"><form id="password-reset-confirm-form" class="modal-form" data-email="${escapeHtml(email || '')}">`
+    + `<label class="form-field"><span>Work email</span><input name="email" type="email" required autocomplete="email" value="${escapeHtml(email || '')}"></label>`
+    + `<label class="form-field"><span>Reset code</span><input name="code" required autocapitalize="characters" autocomplete="one-time-code" placeholder="e.g. K7M2QP4X"></label>`
+    + `<label class="form-field"><span>New passcode</span><input name="password" type="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters"></label>`
+    + `<p class="form-help">The code works once and expires after 15 minutes. Setting a new passcode signs you out everywhere else.</p>`
+    + `<div class="form-actions"><button class="button button-ghost" type="button" data-action="close-modal">Cancel</button>`
+    + `<button class="button button-primary" type="submit">${icon('lock')} Set new passcode</button></div></form></div>`);
+}
+
+async function submitPasswordReset(form) {
+  const email = form.elements.email.value.trim();
+  try {
+    const result = await api('/api/auth/password-reset', { method: 'POST', body: { email } });
+    closeModal();
+    openPasswordResetConfirmModal(email);
+    $('#login-error').textContent = '';
+    if (result?.devCode) showToast('Local reset code', `Use code ${result.devCode} to finish resetting.`);
+    else showToast('Code requested', result.message);
+  } catch (error) {
+    $('#login-error').textContent = error.message;
+    closeModal();
+    showLogin();
+  }
+}
+
+async function submitPasswordResetConfirm(form) {
+  const email = form.elements.email.value.trim();
+  try {
+    await api('/api/auth/password-reset/confirm', {
+      method: 'POST',
+      body: { email, code: form.elements.code.value.trim(), password: form.elements.password.value }
+    });
+    closeModal();
+    showLogin();
+    $('#login-username').value = email.split('@')[0] || '';
+    $('#login-password').value = '';
+    $('#login-password').focus();
+    showToast('Passcode updated', 'Sign in with your new passcode.');
+  } catch (error) {
+    const field = $('.modal .form-error') || $('.modal-form');
+    if (field) field.insertAdjacentHTML('afterend', `<p class="form-error" role="alert">${escapeHtml(error.message)}</p>`);
+    else showToast('Reset failed', error.message, true);
+  }
+}
+
+async function loadPendingResets() {
+  if (state.user?.role !== 'lead') return;
+  try {
+    state.passwordResets = (await api('/api/password-resets/pending')).resets || [];
+  } catch {
+    state.passwordResets = [];
+  }
+}
+
+function openAccountModal() {  const isLead = state.user?.role === 'lead';
   const users = state.dashboard?.users || [];
   const ownerOptions = users.map((user) => `<option value="${user.id}" ${user.id === state.user?.id ? 'selected' : ''}>${escapeHtml(user.name)} · ${escapeHtml(roleLabel(user.role))}</option>`).join('');
   openModal(`${modalHeader('New record', 'Add an account')}<div class="modal-body"><form id="account-form" class="modal-form"><div class="form-grid"><label class="form-field"><span>Account name</span><input name="name" required placeholder="e.g. Acme Bank"></label><label class="form-field"><span>Partner / source</span><input name="partner" placeholder="e.g. Kyndryl"></label></div><div class="form-grid"><label class="form-field"><span>Owner</span><select name="ownerId" ${isLead ? '' : 'disabled'}>${ownerOptions}</select></label><label class="form-field"><span>Stage</span><select name="stage"><option value="discovery">Discovery</option><option value="engagement">Engagement</option><option value="solutioning">Solutioning</option><option value="proposal">Proposal</option><option value="poc">POC</option><option value="negotiation">Negotiation</option><option value="on_hold">On hold</option></select></label><label class="form-field"><span>Health</span><select name="health"><option value="new">New</option><option value="on_track">On track</option><option value="at_risk">At risk</option><option value="watch">Watch</option></select></label><label class="form-field"><span>Priority</span><select name="priority"><option value="normal">Standard</option><option value="high">High</option><option value="critical">Critical</option></select></label></div><div class="form-grid"><label class="form-field"><span>Next action</span><input name="nextAction" placeholder="Confirm next milestone and owner"></label><label class="form-field"><span>Next action date</span><input name="nextActionDate" type="date" value="${todayValue()}"></label></div><p class="form-help">The account starts with ${isLead ? 'the selected owner' : 'you as owner'} and a visible timeline line.</p><div class="form-actions"><button class="button button-ghost" type="button" data-action="close-modal">Cancel</button><button class="button button-primary" type="submit">${icon('plus')} Create account</button></div></form></div>`);
@@ -1712,10 +1795,23 @@ function minimiseGuide() {
   closeGuide();
 }
 
+async function copyResetCode(resetId) {
+  const reset = (state.passwordResets || []).find((item) => String(item.id) === String(resetId));
+  if (!reset?.code) return showToast('Nothing to copy', 'That reset is waiting on an email, not a handover code.', true);
+  try {
+    await navigator.clipboard.writeText(reset.code);
+    showToast('Code copied', `Send ${reset.code} to ${reset.name} privately.`);
+  } catch {
+    showToast('Copy it by hand', reset.code, true);
+  }
+}
+
 function handleAction(actionElement) {
   const action = actionElement.dataset.action;
   if (action === 'close-modal') return closeModal();
   if (action === 'toggle-theme') return toggleTheme();
+  if (action === 'open-reset-request') return openPasswordResetModal();
+  if (action === 'copy-reset-code') return copyResetCode(actionElement.dataset.resetId);
   if (action === 'open-guide') return openGuide();
   if (action === 'close-guide') return closeGuide();
   if (action === 'minimise-guide') return minimiseGuide();
@@ -1899,6 +1995,8 @@ function handleSubmit(event) {
   if (!(form instanceof HTMLFormElement)) return;
   event.preventDefault();
   if (form.id === 'login-form') return submitLogin(form);
+  if (form.id === 'password-reset-form') return submitPasswordReset(form);
+  if (form.id === 'password-reset-confirm-form') return submitPasswordResetConfirm(form);
   if (form.id === 'guide-form') {
     const field = form.elements.question;
     const question = field ? field.value : '';

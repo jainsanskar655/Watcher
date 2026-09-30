@@ -156,8 +156,8 @@
     }
     svg.appendChild(group);
 
-    if (!reduced && hasGsap()) {
-      window.gsap.to(group.querySelectorAll('.atlas-constellation-link'), {
+    upgradeWhenReady((gsap) => {
+      gsap.to(group.querySelectorAll('.atlas-constellation-link'), {
         opacity: 0.9,
         duration: 3.4,
         ease: 'sine.inOut',
@@ -165,7 +165,7 @@
         repeat: -1,
         yoyo: true,
       });
-    }
+    });
   }
 
   /* -------------------------------------------------------------- orrery ---- */
@@ -188,9 +188,11 @@
         ticks.appendChild(line);
       }
     }
-    if (!hand || reduced || !hasGsap()) return;
+    if (!hand) return;
     // one revolution per minute, the way a real instrument would read
-    window.gsap.to(hand, { rotation: 360, transformOrigin: '200px 200px', duration: 60, ease: 'none', repeat: -1 });
+    upgradeWhenReady((gsap) => {
+      gsap.to(hand, { rotation: 360, transformOrigin: '200px 200px', duration: 60, ease: 'none', repeat: -1 });
+    });
   }
 
   /* --------------------------------------------------- TVA energy packets ---- */
@@ -318,14 +320,18 @@
       if (!map) return;
       if (map.dataset.atlasWired === '1') return;
       map.dataset.atlasWired = '1';
-      const paths = map.querySelectorAll('.tva-stream-path, .tva-branch-path, .tva-master-path');
-      paths.forEach((path, i) => energise(path, i));
-      if (!reduced && hasGsap()) {
-        window.gsap.from(map.querySelectorAll('.tva-stream-node, .tva-group-junction'), {
-          scale: 0.2, opacity: 0, transformOrigin: '50% 50%',
-          duration: 0.7, ease: 'back.out(2.4)', stagger: 0.012, delay: 0.2,
-        });
-      }
+      // a map on screen is the one thing that genuinely needs gsap, so fetch it
+      // now and light the conduits the moment it lands
+      loadGsap().then((gsap) => {
+        const paths = map.querySelectorAll('.tva-stream-path, .tva-branch-path, .tva-master-path');
+        paths.forEach((path, i) => energise(path, i));
+        if (!reduced && gsap) {
+          gsap.from(map.querySelectorAll('.tva-stream-node, .tva-group-junction'), {
+            scale: 0.2, opacity: 0, transformOrigin: '50% 50%',
+            duration: 0.7, ease: 'back.out(2.4)', stagger: 0.012, delay: 0.2,
+          });
+        }
+      });
     };
     const observer = new MutationObserver(() => {
       clearTimeout(timer);
@@ -337,16 +343,62 @@
 
   /* ------------------------------------------------------------ ignition ---- */
 
+  // GSAP and MotionPath are ~98KB together and are only ever needed once a TVA
+  // map is actually on screen. The login screen, the dashboard and every
+  // account detail page have no map, so they should never pay for them. The
+  // script tags are dropped from the shell and fetched here on first need.
+  let gsapPromise = null;
+
+  function loadGsap() {
+    if (hasGsap()) return Promise.resolve(window.gsap);
+    if (gsapPromise) return gsapPromise;
+    if (reduced) return Promise.resolve(null);
+    gsapPromise = new Promise((resolve) => {
+      const load = (src) => new Promise((done, fail) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.defer = true;
+        script.onload = done;
+        script.onerror = fail;
+        document.head.appendChild(script);
+      });
+      load('./vendor/gsap.min.js')
+        .then(() => (window.MotionPathPlugin ? load('./vendor/MotionPathPlugin.min.js') : null))
+        .then(() => {
+          if (hasGsap() && window.gsap.registerPlugin && window.MotionPathPlugin) {
+            window.gsap.registerPlugin(window.MotionPathPlugin);
+          }
+          resolve(hasGsap() ? window.gsap : null);
+        })
+        .catch(() => resolve(null));
+    });
+    return gsapPromise;
+  }
+
+  // The constellation and the orrery are atmosphere, so they must not block the
+  // shell. They still need gsap, so they upgrade themselves once it lands.
+  function upgradeWhenReady(task) {
+    if (reduced) return;
+    loadGsap().then((gsap) => {
+      if (gsap) task(gsap);
+    });
+  }
+
   function init() {
-    // register the plugins once, up front, so the first packet is not late
-    if (hasGsap() && window.gsap.registerPlugin) {
-      if (window.MotionPathPlugin) window.gsap.registerPlugin(window.MotionPathPlugin);
-      if (window.DrawSVGPlugin) window.gsap.registerPlugin(window.DrawSVGPlugin);
-    }
-    buildConstellation();
-    buildOrrery();
-    if (!reduced) startSky();
+    // Anything already on screen at boot (a restored session lands straight on
+    // the dashboard) may already own a map, so offer it gsap straight away.
     watchTimeline();
+    if (document.querySelector('.tva-map-svg')) loadGsap();
+
+    // The starfield is a continuous rAF loop; never let it be scheduled in the
+    // same frame as the first paint, or it competes with layout for the main
+    // thread. Atmosphere can wait a tick, the shell cannot.
+    const afterPaint = window.requestAnimationFrame || ((fn) => setTimeout(fn, 0));
+    afterPaint(() => {
+      buildConstellation();
+      buildOrrery();
+      if (!reduced) startSky();
+    });
 
     // a page that was already on the app (session restored) still needs the sky
     document.addEventListener('visibilitychange', () => {

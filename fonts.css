@@ -1,0 +1,43 @@
+/* Self-hosted so the strict CSP (font-src 'self') can never block them, and so the
+   app keeps working offline like everything else here. Inter and Cormorant Garamond are
+   variable fonts, so one file covers the whole weight range. Generated from Google Fonts. */
+
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url('./fonts/cormorant-garamond-var.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: italic;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url('./fonts/cormorant-garamond-italic-var.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./fonts/inter-var.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/dm-mono-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/dm-mono-500.woff2') format('woff2');
+}
